@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Volume Booster",
+  "version": "1.0",
+  "description": "Boosts volume on specified websites from 10% to 600%.",
+  "permissions": [
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Volume Booster",
+    "default_popup": "popup.html"
+  }
+}

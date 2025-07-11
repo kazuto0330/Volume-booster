@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Volume Booster</title>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg-color: #f4f7f9;
+      --text-color: #333;
+      --title-color: #2c3e50;
+      --secondary-text-color: #7f8c8d;
+      --accent-color: #3498db;
+      --accent-hover-color: #2980b9;
+      --border-color: #bdc3c7;
+      --input-bg-color: #fff;
+      --slider-track-color: #dfe6e9;
+      --shadow-color: rgba(0,0,0,0.2);
+    }
+    body.theme-dark {
+      --bg-color: #2c3e50;
+      --text-color: #ecf0f1;
+      --title-color: #fff;
+      --secondary-text-color: #95a5a6;
+      --accent-color: #3498db;
+      --accent-hover-color: #4aa3df;
+      --border-color: #566573;
+      --input-bg-color: #34495e;
+      --slider-track-color: #50667b;
+      --shadow-color: rgba(0,0,0,0.4);
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      width: 320px;
+      padding: 20px;
+      box-sizing: border-box;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color .2s, color .2s;
+    }
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 15px 0;
+      text-align: center;
+      color: var(--title-color);
+    }
+    #status-message {
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 20px;
+      color: var(--secondary-text-color);
+      min-height: 14px;
+    }
+    .controls-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      flex-grow: 1; width: 100%; height: 8px;
+      background: var(--slider-track-color);
+      border-radius: 5px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 24px; height: 24px;
+      background: var(--accent-color);
+      cursor: pointer; border-radius: 50%;
+      box-shadow: 0 2px 5px var(--shadow-color);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 24px; height: 24px;
+      background: var(--accent-color);
+      cursor: pointer; border-radius: 50%; border: none;
+    }
+    input[type="number"] {
+      width: 70px; text-align: center;
+      font-size: 16px; font-weight: 500;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--input-bg-color);
+      color: var(--text-color);
+    }
+    input[type="number"]:focus {
+      outline: none; border-color: var(--accent-color);
+    }
+    .footer {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .settings-controls button {
+      background: none; border: none; cursor: pointer;
+      font-size: 20px; padding: 5px;
+      color: var(--secondary-text-color);
+    }
+    a#options-link {
+      color: var(--secondary-text-color);
+      font-size: 12px; text-decoration: none;
+    }
+    a#options-link:hover {
+      color: var(--accent-color); text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="appName"></h1>
+  <div id="status-message"></div>
+
+  <div class="controls-container">
+    <input type="range" id="boost-slider" min="10" max="600" value="100">
+    <input type="number" id="boost-input" min="10" max="600" value="100">
+  </div>
+
+  <div class="footer">
+    <div class="settings-controls">
+      <button id="theme-toggle-btn">☀️</button>
+      <button id="lang-toggle-btn">🇺🇸</button>
+    </div>
+    <a href="#" id="options-link"></a>
+  </div>
+
+  <script src="strings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

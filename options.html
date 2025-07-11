@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title id="optionsTitle"></title>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg-color: #f4f7f9;
+      --text-color: #333;
+      --title-color: #2c3e50;
+      --secondary-text-color: #7f8c8d;
+      --accent-color: #3498db;
+      --accent-hover-color: #2980b9;
+      --border-color: #ccc;
+      --container-bg-color: #fff;
+      --table-header-bg-color: #ecf0f1;
+      --table-row-bg-color: #f9fafb;
+      --danger-color: #e74c3c;
+      --danger-hover-color: #c0392b;
+      --shadow-color: rgba(0,0,0,0.08);
+    }
+    body.theme-dark {
+      --bg-color: #1f2933;
+      --text-color: #ecf0f1;
+      --title-color: #fff;
+      --secondary-text-color: #95a5a6;
+      --accent-color: #3498db;
+      --accent-hover-color: #4aa3df;
+      --border-color: #566573;
+      --container-bg-color: #2c3e50;
+      --table-header-bg-color: #34495e;
+      --table-row-bg-color: #3b5166;
+      --danger-color: #e74c3c;
+      --danger-hover-color: #f16a5c;
+      --shadow-color: rgba(0,0,0,0.25);
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 2em;
+      transition: background-color .2s, color .2s;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+    .settings-controls button {
+      background: none; border: none; cursor: pointer;
+      font-size: 24px; padding: 5px;
+      color: var(--secondary-text-color);
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: var(--container-bg-color);
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px var(--shadow-color);
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--title-color);
+    }
+    .form-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+    .form-container input {
+      flex-grow: 1;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+    .form-container input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+    .form-container button {
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      transition: background-color .2s;
+    }
+    .form-container button:hover {
+      background-color: var(--accent-hover-color);
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 8px;
+    }
+    th {
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+      padding: 0 8px 8px;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--table-header-bg-color);
+    }
+    td {
+      background-color: var(--table-row-bg-color);
+      padding: 12px;
+      vertical-align: middle;
+    }
+    tr td:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+    tr td:last-child { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+    .boost-input {
+      width: 70px;
+      text-align: center;
+      font-size: 14px;
+      padding: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+    .delete-btn {
+      color: var(--danger-color);
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      transition: color .2s;
+    }
+    .delete-btn:hover {
+      color: var(--danger-hover-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 id="optionsTitle-h1"></h1>
+      <div class="settings-controls">
+        <button id="theme-toggle-btn">☀️</button>
+        <button id="lang-toggle-btn">🇺🇸</button>
+      </div>
+    </div>
+
+    <div class="form-container">
+      <input type="text" id="domain-input">
+      <input type="number" id="boost-input" min="10" max="600">
+      <button id="add-btn"></button>
+    </div>
+
+    <table id="settings-table">
+      <thead>
+        <tr>
+          <th id="headerDomain"></th>
+          <th id="headerBoost"></th>
+          <th id="headerAction"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Settings will be populated here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script src="strings.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
