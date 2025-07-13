@@ -4,10 +4,8 @@ const strings = {
     appName: "音量ブースター",
     manageSettings: "すべての設定を管理",
     // Popup
-    statusLoading: "読み込み中...",
-    statusNotSet: "このサイトは未設定です。",
-    statusSet: (boost) => `現在の設定: ${boost}%`,
-    statusSaved: (boost) => `設定を保存しました: ${boost}%`,
+    currentTab: "現在のタブのみ",
+    siteWide: "サイト全体",
     statusUnsupported: "このページでは使用できません。",
     // Options
     optionsTitle: "音量ブースター設定",
@@ -27,10 +25,8 @@ const strings = {
     appName: "Volume Booster",
     manageSettings: "Manage All Settings",
     // Popup
-    statusLoading: "Loading...",
-    statusNotSet: "This site is not configured.",
-    statusSet: (boost) => `Current setting: ${boost}%`,
-    statusSaved: (boost) => `Settings saved: ${boost}%`,
+    currentTab: "Current Tab Only",
+    siteWide: "Site-wide",
     statusUnsupported: "Not available on this page.",
     // Options
     optionsTitle: "Volume Booster Settings",

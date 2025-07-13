@@ -8,6 +8,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   let gainNode = null;
   const mediaElements = new WeakMap();
   let domObserver = null;
+  let currentBoost = 100; // 現在のブースト値を保持
 
   // Web Audio APIのセットアップ
   function setupAudioContext() {
@@ -26,6 +27,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
   // 指定されたブースト率を適用
   function applyBoost(boost) {
+    currentBoost = boost; // 値を更新
     if (!gainNode) {
       // gainNodeがない場合、AudioContextのセットアップがまだ
       setupAudioContext();
@@ -76,6 +78,8 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     if (request.type === 'UPDATE_VOLUME') {
       applyBoost(request.boost);
       sendResponse({ status: "ok" });
+    } else if (request.type === 'GET_CURRENT_VOLUME') {
+      sendResponse({ boost: currentBoost });
     }
     return true; // 非同期レスポンスのためにtrueを返す
   });
@@ -88,6 +92,8 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       if (data.boostSettings && domain in data.boostSettings) {
         console.log(`Volume Booster: Found saved setting for ${domain}.`);
         applyBoost(data.boostSettings[domain]);
+      } else {
+        applyBoost(100); // デフォルト値
       }
     } catch (e) {
       console.error("Volume Booster: Error reading from storage.", e);
