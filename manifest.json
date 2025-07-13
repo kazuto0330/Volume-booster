@@ -3,6 +3,11 @@
   "name": "Volume Booster",
   "version": "1.0",
   "description": "Boosts volume on specified websites from 10% to 600%.",
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
   "permissions": [
     "storage",
     "scripting"
@@ -16,6 +21,7 @@
   "options_page": "options.html",
   "action": {
     "default_title": "Volume Booster",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
   }
 }
