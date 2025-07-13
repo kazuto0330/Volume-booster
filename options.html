@@ -140,6 +140,24 @@
     .delete-btn:hover {
       color: var(--danger-hover-color);
     }
+    .reset-container {
+      margin-top: 30px;
+      text-align: end;
+    }
+    .danger-button {
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background-color: var(--danger-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      transition: background-color .2s;
+    }
+    .danger-button:hover {
+      background-color: var(--danger-hover-color);
+    }
   </style>
 </head>
 <body>
@@ -170,6 +188,10 @@
         <!-- Settings will be populated here -->
       </tbody>
     </table>
+
+    <div class="reset-container">
+      <button id="reset-settings-btn" class="danger-button"></button>
+    </div>
   </div>
 
   <script src="strings.js"></script>

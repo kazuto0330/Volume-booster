@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsTableBody = document.querySelector('#settings-table tbody');
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const langToggleBtn = document.getElementById('lang-toggle-btn');
+  const resetSettingsBtn = document.getElementById('reset-settings-btn'); // New element
 
   // State
   let currentLang = 'ja';
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     themeToggleBtn.addEventListener('click', handleThemeToggle);
     langToggleBtn.addEventListener('click', handleLangToggle);
+    resetSettingsBtn.addEventListener('click', handleResetSettings); // New event listener
 
     chrome.runtime.onMessage.addListener((request) => {
       if (request.type === 'SETTINGS_UPDATED') {
@@ -84,6 +86,22 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
     });
+  }
+
+  function handleResetSettings() {
+    if (confirm(strings[currentLang].resetConfirm)) {
+      chrome.storage.sync.clear(() => {
+        if (chrome.runtime.lastError) {
+          console.error("Error clearing storage: ", chrome.runtime.lastError);
+        } else {
+          console.log("All settings cleared.");
+          // Re-initialize the page to reflect default settings
+          initialize(); 
+          // Notify other parts of the extension (e.g., popup) to update
+          chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+        }
+      });
+    }
   }
 
   // --- Core Logic ---
@@ -145,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('headerDomain').textContent = s.headerDomain;
     document.getElementById('headerBoost').textContent = s.headerBoost;
     document.getElementById('headerAction').textContent = s.headerAction;
+    resetSettingsBtn.textContent = s.resetAllSettings; // Set text for new button
   }
 
   function renderTable(settings) {

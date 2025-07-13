@@ -19,6 +19,8 @@ const strings = {
     deleteConfirm: (domain) => `${domain} の設定を削除しますか？`,
     alertDomain: "ドメイン名を入力してください。",
     alertBoost: "ブースト率には10から600までの数値を入力してください。",
+    resetAllSettings: "すべての設定をリセット",
+    resetConfirm: "すべての設定をリセットしてもよろしいですか？この操作は元に戻せません。",
   },
   en: {
     // General
@@ -40,5 +42,7 @@ const strings = {
     deleteConfirm: (domain) => `Are you sure you want to delete the setting for ${domain}?`,
     alertDomain: "Please enter a domain name.",
     alertBoost: "Please enter a boost value between 10 and 600.",
+    resetAllSettings: "Reset All Settings",
+    resetConfirm: "Are you sure you want to reset all settings? This cannot be undone."
   }
 };

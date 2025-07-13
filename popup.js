@@ -7,7 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const optionsLink = document.getElementById('options-link');
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
-  const langToggleBtn = document.getElementById('lang-toggle-btn');
+  const languageSelectorContainer = document.getElementById('language-selector-container');
+  let languageSelect; // Will be created dynamically
+
   const domainTitle = document.getElementById('domain-title');
   const domainDisplay = document.getElementById('current-domain-display');
 
@@ -15,20 +17,77 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentTab = null;
   let currentDomain = null;
   let debounceTimer;
-  let currentLang = 'ja';
+  let currentLang = 'en'; // Default to English
   let currentTheme = 'light';
+
+  // Available languages with display names
+  const availableLanguages = {
+    'en': 'English',
+    'ja': '日本語'
+  };
 
   // --- Initialization ---
   function initialize() {
+    initializeLanguageSelector(); // Create and populate the language dropdown
+
     chrome.storage.sync.get(['theme', 'language'], (settings) => {
-      currentTheme = settings.theme || 'light';
-      currentLang = settings.language || 'ja';
+      // Determine initial theme
+      let initialTheme = settings.theme;
+      if (!initialTheme) {
+        // Detect system theme preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          initialTheme = 'dark';
+        } else {
+          initialTheme = 'light';
+        }
+      }
+      currentTheme = initialTheme;
       applyTheme(currentTheme);
+
+      // Determine initial language
+      let initialLang = settings.language;
+      if (!initialLang) {
+        const browserUILang = chrome.i18n.getUILanguage();
+        // Use the first two characters for language code (e.g., 'en-US' -> 'en')
+        const shortLang = browserUILang.split('-')[0]; 
+        if (strings[shortLang]) {
+          initialLang = shortLang;
+        } else {
+          initialLang = 'en'; // Fallback to English if browser language not supported
+        }
+      }
+      
+      currentLang = initialLang;
+      languageSelect.value = currentLang; // Set dropdown value
       applyLanguage(currentLang);
       initializePopupContent();
     });
 
     addEventListeners();
+  }
+
+  function initializeLanguageSelector() {
+    languageSelect = document.createElement('select');
+    languageSelect.id = 'language-select';
+    languageSelect.style.cssText = `
+      padding: 5px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--input-bg-color);
+      color: var(--text-color);
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+      vertical-align: middle; /* Added for better alignment */
+    `;
+
+    for (const langCode in availableLanguages) {
+      const option = document.createElement('option');
+      option.value = langCode;
+      option.textContent = availableLanguages[langCode];
+      languageSelect.appendChild(option);
+    }
+    languageSelectorContainer.appendChild(languageSelect);
   }
 
   function initializePopupContent() {
@@ -75,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     domainNumberInput.addEventListener('input', () => handleDomainChange(domainNumberInput.value));
     
     themeToggleBtn.addEventListener('click', handleThemeToggle);
-    langToggleBtn.addEventListener('click', handleLangToggle);
+    languageSelect.addEventListener('change', handleLanguageChange); // New event listener for select
 
     optionsLink.addEventListener('click', (e) => {
       e.preventDefault();
@@ -113,12 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function handleLangToggle() {
-    const newLang = currentLang === 'ja' ? 'en' : 'ja';
+  function handleLanguageChange() {
+    const newLang = languageSelect.value;
     chrome.storage.sync.set({ language: newLang }, () => {
       currentLang = newLang;
       applyLanguage(newLang);
-      initializePopupContent();
+      initializePopupContent(); // Re-initialize content to apply new language strings
       chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
     });
   }
@@ -185,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('temp-title').textContent = strings[lang].currentTab;
     document.getElementById('domain-title').textContent = strings[lang].siteWide;
     document.getElementById('options-link').textContent = strings[lang].manageSettings;
-    langToggleBtn.textContent = lang === 'ja' ? '🇺🇸' : '🇯🇵';
+    // No longer updating a button text for language
   }
 
   // --- Run ---
