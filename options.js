@@ -6,16 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsTableBody = document.querySelector('#settings-table tbody');
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const langToggleBtn = document.getElementById('lang-toggle-btn');
-  const resetSettingsBtn = document.getElementById('reset-settings-btn'); // New element
+  const resetSettingsBtn = document.getElementById('reset-settings-btn');
 
   // State
   let currentLang = 'ja';
-  let currentTheme = 'light';
+  let currentTheme = 'dark'; // Default to dark mode
 
   // --- Initialization ---
   function initialize() {
     chrome.storage.sync.get(['theme', 'language', 'boostSettings'], (settings) => {
-      currentTheme = settings.theme || 'light';
+      currentTheme = settings.theme || 'dark'; // Default to dark
       currentLang = settings.language || 'ja';
       applyTheme(currentTheme);
       applyLanguage(currentLang);
@@ -33,7 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     themeToggleBtn.addEventListener('click', handleThemeToggle);
     langToggleBtn.addEventListener('click', handleLangToggle);
-    resetSettingsBtn.addEventListener('click', handleResetSettings); // New event listener
+    resetSettingsBtn.addEventListener('click', handleResetSettings);
+
+    // Select text on click for number inputs
+    boostInput.addEventListener('click', (e) => e.target.select());
 
     chrome.runtime.onMessage.addListener((request) => {
       if (request.type === 'SETTINGS_UPDATED') {
@@ -48,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const boost = parseInt(boostInput.value, 10);
     saveOrUpdateSetting(domain, boost);
     domainInput.value = '';
-    boostInput.value = '';
+    boostInput.value = '150'; // Reset to default
   }
 
   function handleTableClick(event) {
@@ -58,10 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteSetting(domainToDelete);
       }
     }
+    // Select text on click for number inputs in the table
+    if (event.target.classList.contains('table-boost-input')) {
+      event.target.select();
+    }
   }
 
   function handleTableChange(event) {
-    if (event.target.classList.contains('boost-input')) {
+    if (event.target.classList.contains('table-boost-input')) {
       const domainToUpdate = event.target.dataset.domain;
       const newBoost = parseInt(event.target.value, 10);
       saveOrUpdateSetting(domainToUpdate, newBoost);
@@ -95,9 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error("Error clearing storage: ", chrome.runtime.lastError);
         } else {
           console.log("All settings cleared.");
-          // Re-initialize the page to reflect default settings
           initialize(); 
-          // Notify other parts of the extension (e.g., popup) to update
           chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
         }
       });
@@ -110,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert(strings[currentLang].alertDomain);
       return;
     }
-    if (isNaN(boost) || boost < 10 || boost > 600) {
+    if (isNaN(boost) || boost < 0 || boost > 600) { // Updated range
       alert(strings[currentLang].alertBoost);
       return;
     }
@@ -158,12 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.title = s.optionsTitle;
     document.getElementById('optionsTitle-h1').textContent = s.optionsTitle;
     domainInput.placeholder = s.domainPlaceholder;
-    boostInput.placeholder = s.boostPlaceholder;
     addButton.textContent = s.add;
     document.getElementById('headerDomain').textContent = s.headerDomain;
     document.getElementById('headerBoost').textContent = s.headerBoost;
     document.getElementById('headerAction').textContent = s.headerAction;
-    resetSettingsBtn.textContent = s.resetAllSettings; // Set text for new button
+    resetSettingsBtn.textContent = s.resetAllSettings;
   }
 
   function renderTable(settings) {
@@ -172,7 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${domain}</td>
-        <td><input type="number" class="boost-input" min="10" max="600" value="${settings[domain]}" data-domain="${domain}"></td>
+        <td>
+          <div class="boost-input-container">
+            <input type="number" class="boost-input table-boost-input" min="0" max="600" value="${settings[domain]}" data-domain="${domain}">
+            <span>%</span>
+          </div>
+        </td>
         <td><span class="delete-btn" data-domain="${domain}">${strings[currentLang].deleteAction}</span></td>
       `;
       settingsTableBody.appendChild(row);

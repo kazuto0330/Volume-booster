@@ -32,16 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chrome.storage.sync.get(['theme', 'language'], (settings) => {
       // Determine initial theme
-      let initialTheme = settings.theme;
-      if (!initialTheme) {
-        // Detect system theme preference
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          initialTheme = 'dark';
-        } else {
-          initialTheme = 'light';
-        }
-      }
-      currentTheme = initialTheme;
+      currentTheme = settings.theme || 'dark'; // Default to dark
       applyTheme(currentTheme);
 
       // Determine initial language
@@ -127,20 +118,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Event Listeners ---
   function addEventListeners() {
+    // Slider and number input listeners
     tempSlider.addEventListener('input', () => handleTempChange(tempSlider.value));
     tempNumberInput.addEventListener('input', () => handleTempChange(tempNumberInput.value));
-
     domainSlider.addEventListener('input', () => handleDomainChange(domainSlider.value));
     domainNumberInput.addEventListener('input', () => handleDomainChange(domainNumberInput.value));
-    
-    themeToggleBtn.addEventListener('click', handleThemeToggle);
-    languageSelect.addEventListener('change', handleLanguageChange); // New event listener for select
 
+    // Select text on click for number inputs
+    tempNumberInput.addEventListener('click', (e) => e.target.select());
+    domainNumberInput.addEventListener('click', (e) => e.target.select());
+
+    // Mouse wheel listeners for sliders
+    tempSlider.addEventListener('wheel', (e) => handleSliderWheel(e, tempSlider, handleTempChange));
+    domainSlider.addEventListener('wheel', (e) => handleSliderWheel(e, domainSlider, handleDomainChange));
+
+    // Other UI listeners
+    themeToggleBtn.addEventListener('click', handleThemeToggle);
+    languageSelect.addEventListener('change', handleLanguageChange);
     optionsLink.addEventListener('click', (e) => {
       e.preventDefault();
       chrome.runtime.openOptionsPage();
     });
 
+    // Listener for updates from other parts of the extension
     chrome.runtime.onMessage.addListener((request) => {
       if (request.type === 'SETTINGS_UPDATED') {
         initialize();
@@ -149,6 +149,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Handlers ---
+  function handleSliderWheel(event, slider, handler) {
+    event.preventDefault();
+    const currentValue = parseInt(slider.value, 10);
+    let step = 0;
+
+    if (event.deltaY < 0) { // Scrolling up
+      step = currentValue < 100 ? 10 : 20;
+    } else { // Scrolling down
+      step = currentValue <= 100 ? -10 : -20;
+    }
+
+    const newValue = currentValue + step;
+    handler(newValue);
+  }
   function handleTempChange(value) {
     const boost = sanitizeBoostValue(value);
     updateControls(tempSlider, tempNumberInput, boost);
@@ -220,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function sanitizeBoostValue(value) {
     let boost = parseInt(value, 10);
     if (isNaN(boost)) return 100;
-    if (boost < 10) boost = 10;
+    if (boost < 0) boost = 0;
     if (boost > 600) boost = 600;
     return boost;
   }
