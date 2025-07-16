@@ -112,6 +112,11 @@ document.addEventListener('DOMContentLoaded', () => {
         domainDisplay.textContent = strings[currentLang].statusUnsupported;
         domainTitle.textContent = strings[currentLang].siteWide;
         enableControls(false);
+        
+        const controlGroups = document.querySelectorAll('.control-group');
+        controlGroups.forEach(element => {
+          element.style.display = 'none';
+        });
       }
     });
   }
