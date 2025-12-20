@@ -84,14 +84,44 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     return true; // 非同期レスポンスのためにtrueを返す
   });
 
+  // URLの正規化（プロトコルとwww.を除去）
+  function getNormalizedUrl() {
+    let url = window.location.href;
+    url = url.replace(/^https?:\/\//, '');
+    url = url.replace(/^www\./, '');
+    return url;
+  }
+
+  // キーがURLにマッチするか判定（ドメイン/パス境界を考慮）
+  function isMatch(key, url) {
+    if (!url.startsWith(key)) return false;
+    if (url.length === key.length) return true;
+    const nextChar = url[key.length];
+    return ['/', '?', '#'].includes(nextChar);
+  }
+
   // ページ読み込み時に保存された設定を適用
   async function initializeFromStorage() {
-    const domain = window.location.hostname.replace('www.', '');
+    const currentUrl = getNormalizedUrl();
     try {
       const data = await chrome.storage.sync.get({ boostSettings: {} });
-      if (data.boostSettings && domain in data.boostSettings) {
-        console.log(`Volume Booster: Found saved setting for ${domain}.`);
-        applyBoost(data.boostSettings[domain]);
+      const settings = data.boostSettings || {};
+      
+      let bestMatchKey = null;
+      let maxLen = -1;
+
+      for (const key in settings) {
+        if (isMatch(key, currentUrl)) {
+          if (key.length > maxLen) {
+            maxLen = key.length;
+            bestMatchKey = key;
+          }
+        }
+      }
+
+      if (bestMatchKey) {
+        console.log(`Volume Booster: Found saved setting for ${bestMatchKey} (applied to ${currentUrl}).`);
+        applyBoost(settings[bestMatchKey]);
       } else {
         applyBoost(100); // デフォルト値
       }

@@ -85,13 +85,51 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       currentTab = tabs[0];
       if (currentTab.url && currentTab.url.startsWith('http')) {
-        currentDomain = new URL(currentTab.url).hostname.replace('www.', '');
-        domainDisplay.textContent = currentDomain;
-        domainTitle.textContent = strings[currentLang].siteWide;
+        // URL正規化とホスト名の取得
+        let url = currentTab.url;
+        url = url.replace(/^https?:\/\//, '');
+        url = url.replace(/^www\./, '');
+        const normalizedUrl = url;
+        const hostname = new URL(currentTab.url).hostname.replace('www.', '');
 
-        // 1. ドメイン設定を読み込み、ドメインスライダーを設定
+        // 1. 設定を読み込み、最適なキー（ドメインまたはパス）を決定
         chrome.storage.sync.get({ boostSettings: {} }, (data) => {
-          const domainBoost = data.boostSettings?.[currentDomain] ?? 100;
+          const settings = data.boostSettings || {};
+          
+          // 最長一致検索
+          let bestMatchKey = null;
+          let maxLen = -1;
+
+          for (const key in settings) {
+             let isMatch = false;
+             if (normalizedUrl.startsWith(key)) {
+                if (normalizedUrl.length === key.length) {
+                    isMatch = true;
+                } else {
+                    const nextChar = normalizedUrl[key.length];
+                    if (['/', '?', '#'].includes(nextChar)) isMatch = true;
+                }
+             }
+             
+             if (isMatch) {
+               if (key.length > maxLen) {
+                 maxLen = key.length;
+                 bestMatchKey = key;
+               }
+             }
+          }
+
+          // マッチする設定があればそれを採用、なければホスト名をデフォルトにする
+          if (bestMatchKey) {
+            currentDomain = bestMatchKey;
+          } else {
+            currentDomain = hostname;
+          }
+
+          domainDisplay.textContent = currentDomain;
+          domainTitle.textContent = strings[currentLang].siteWide;
+
+          const domainBoost = settings[currentDomain] ?? 100;
           updateControls(domainSlider, domainNumberInput, domainBoost);
 
           // 2. content.jsから現在のタブの音量を取得し、一時スライダーを設定

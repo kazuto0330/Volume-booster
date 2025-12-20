@@ -144,7 +144,23 @@ document.addEventListener('DOMContentLoaded', () => {
   function notifyMatchingTabs(domain, boost) {
     chrome.tabs.query({}, (tabs) => {
       tabs.forEach(tab => {
-        if (tab.url && new URL(tab.url).hostname.includes(domain)) {
+        if (!tab.url) return;
+        
+        let url = tab.url;
+        url = url.replace(/^https?:\/\//, '');
+        url = url.replace(/^www\./, '');
+        
+        let isMatch = false;
+        if (url.startsWith(domain)) {
+             if (url.length === domain.length) {
+                 isMatch = true;
+             } else {
+                 const nextChar = url[domain.length];
+                 if (['/', '?', '#'].includes(nextChar)) isMatch = true;
+             }
+        }
+
+        if (isMatch) {
           chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_VOLUME', boost: boost });
         }
       });
