@@ -184,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('headerBoost').textContent = s.headerBoost;
     document.getElementById('headerAction').textContent = s.headerAction;
     resetSettingsBtn.textContent = s.resetAllSettings;
+    langToggleBtn.textContent = lang === 'ja' ? '🇺🇸' : '🇯🇵';
   }
 
   function renderTable(settings) {
