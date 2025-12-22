@@ -46,6 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsList.addEventListener('dblclick', handleListDoubleClick);
     settingsList.addEventListener('change', handleListChange);
     
+    // Global click to close dropdowns
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.menu-container')) {
+        closeAllDropdowns();
+      }
+    });
+    
     themeToggleBtn.addEventListener('click', handleThemeToggle);
     langToggleBtn.addEventListener('click', handleLangToggle);
     resetSettingsBtn.addEventListener('click', handleResetSettings);
@@ -86,13 +93,47 @@ document.addEventListener('DOMContentLoaded', () => {
     domainInput.value = '';
     boostInput.value = '150'; // Reset to default
   }
+  
+  function closeAllDropdowns() {
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+      menu.classList.remove('show');
+    });
+  }
 
   function handleListClick(event) {
-    // Traverse up to find the button if clicked on SVG/Path
-    const deleteBtn = event.target.closest('.delete-icon-btn');
+    // 1. Handle Kebab Menu Button Click
+    const menuBtn = event.target.closest('.kebab-menu-btn');
+    if (menuBtn) {
+      const container = menuBtn.closest('.menu-container');
+      const dropdown = container.querySelector('.dropdown-menu');
+      
+      // Close other dropdowns first
+      document.querySelectorAll('.dropdown-menu.show').forEach(d => {
+        if (d !== dropdown) d.classList.remove('show');
+      });
+
+      dropdown.classList.toggle('show');
+      return;
+    }
+
+    // 2. Handle Edit Action
+    const editBtn = event.target.closest('.edit-action');
+    if (editBtn) {
+      const domain = editBtn.dataset.domain;
+      // Find the row element
+      const row = editBtn.closest('.setting-item');
+      const domainDiv = row.querySelector('.col-domain');
+      startEditing(domainDiv);
+      closeAllDropdowns();
+      return;
+    }
+
+    // 3. Handle Delete Action
+    const deleteBtn = event.target.closest('.delete-action');
     if (deleteBtn) {
       const domainToDelete = deleteBtn.dataset.domain;
       deleteSetting(domainToDelete);
+      closeAllDropdowns();
       return;
     }
     
@@ -112,13 +153,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleListDoubleClick(event) {
     const domainDiv = event.target.closest('.col-domain');
-    if (!domainDiv || domainDiv.querySelector('input')) return;
+    if (!domainDiv) return;
+    startEditing(domainDiv);
+  }
+  
+  function startEditing(domainDiv) {
+    if (domainDiv.querySelector('input')) return;
 
     const oldDomain = domainDiv.textContent;
     const input = document.createElement('input');
     input.type = 'text';
     input.value = oldDomain;
-    input.className = 'edit-domain-input'; // Use for styling if needed, or rely on global input styles
+    input.className = 'edit-domain-input'; 
     
     // Replace text with input
     domainDiv.innerHTML = '';
@@ -151,14 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renameDomain(oldDomain, newDomain) {
     chrome.storage.sync.get({ boostSettings: {} }, (data) => {
       const settings = data.boostSettings;
-      if (settings[newDomain]) {
-         // If target domain already exists, maybe warn or overwrite?
-         // For now, let's just overwrite/merge logic: 
-         // But wait, if we rename google.com to yahoo.com, and yahoo.com exists, 
-         // we overwrite yahoo.com's boost with google.com's boost? 
-         // Or keep yahoo.com's boost? 
-         // Usually renaming implies moving the value to the new key.
-      }
+      // Handle overwrite scenario simply for now
       const boost = settings[oldDomain];
       delete settings[oldDomain];
       settings[newDomain] = boost;
@@ -170,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+  
+  // ... (rest of the file) ...
 
   function handleThemeToggle() {
     const newTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
@@ -309,8 +350,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const item = document.createElement('div');
       item.className = 'setting-item';
       
-      // Trash Icon SVG
-      const trashIcon = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+      // Kebab Icon SVG
+      const kebabIcon = `<svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>`;
 
       item.innerHTML = `
         <div class="col-domain">${domain}</div>
@@ -321,9 +362,19 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div class="col-action">
-          <button class="delete-icon-btn" data-domain="${domain}" title="${strings[currentLang].deleteAction}">
-            ${trashIcon}
-          </button>
+          <div class="menu-container">
+            <button class="kebab-menu-btn" title="Menu">
+              ${kebabIcon}
+            </button>
+            <div class="dropdown-menu">
+               <button class="dropdown-item edit-action" data-domain="${domain}">
+                 <span>${strings[currentLang].editAction}</span>
+               </button>
+               <button class="dropdown-item danger delete-action" data-domain="${domain}">
+                 <span>${strings[currentLang].deleteAction}</span>
+               </button>
+            </div>
+          </div>
         </div>
       `;
       settingsList.appendChild(item);

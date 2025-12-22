@@ -302,12 +302,83 @@
       -moz-appearance: textfield;
     }
 
-    /* Empty State */
-    .empty-state {
-        text-align: center;
-        padding: 40px;
-        color: var(--secondary-text-color);
-        font-style: italic;
+    /* Kebab Menu */
+    .menu-container {
+      position: relative;
+      display: inline-block;
+    }
+    .kebab-menu-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      color: var(--secondary-text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+    }
+    .kebab-menu-btn:hover {
+      background-color: var(--item-hover-bg-color);
+      color: var(--text-color);
+    }
+    .kebab-menu-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+    
+    .dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      width: 140px;
+      background-color: var(--container-bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      padding: 4px 0;
+      overflow: hidden;
+    }
+    .dropdown-menu.show {
+      display: flex;
+    }
+    .dropdown-item {
+      padding: 10px 16px;
+      font-size: 14px;
+      color: var(--text-color);
+      cursor: pointer;
+      text-align: left;
+      background: none;
+      border: none;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background-color 0.2s;
+    }
+    .dropdown-item:hover {
+      background-color: var(--item-hover-bg-color);
+    }
+    .dropdown-item.danger {
+      color: var(--danger-color);
+    }
+    .dropdown-item.danger:hover {
+      background-color: rgba(220, 53, 69, 0.05);
+    }
+    
+    /* Edit input override */
+    .edit-domain-input {
+      width: 100%;
+      padding: 4px 8px;
+      font-size: 16px;
+      border: 1px solid var(--accent-color);
+      border-radius: 4px;
+      box-sizing: border-box;
     }
   </style>
 </head>
