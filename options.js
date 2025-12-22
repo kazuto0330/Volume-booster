@@ -52,6 +52,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Select text on click for number inputs
     boostInput.addEventListener('click', (e) => e.target.select());
 
+    // Auto-clean domain input
+    domainInput.addEventListener('input', () => {
+      const originalValue = domainInput.value;
+      const cleanedValue = cleanDomain(originalValue);
+      if (originalValue !== cleanedValue && (originalValue.includes('://') || originalValue.startsWith('www.'))) {
+        domainInput.value = cleanedValue;
+      }
+    });
+    domainInput.addEventListener('blur', () => {
+      domainInput.value = cleanDomain(domainInput.value);
+    });
+
     chrome.runtime.onMessage.addListener((request) => {
       if (request.type === 'SETTINGS_UPDATED') {
         initialize();
@@ -60,8 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Handlers ---
+  function cleanDomain(value) {
+    return value.trim()
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, '');
+  }
+
   function handleAdd() {
-    const domain = domainInput.value.trim();
+    const domain = cleanDomain(domainInput.value);
     const boost = parseInt(boostInput.value, 10);
     saveOrUpdateSetting(domain, boost);
     domainInput.value = '';
