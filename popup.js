@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const domainSlider = document.getElementById('domain-boost-slider');
   const domainNumberInput = document.getElementById('domain-boost-input');
   
-  const optionsLink = document.getElementById('options-link');
+  const optionsBtn = document.getElementById('options-btn');
+
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const languageSelectorContainer = document.getElementById('language-selector-container');
   let languageSelect; // Will be created dynamically
@@ -69,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
       font-size: 12px;
       cursor: pointer;
       outline: none;
-      vertical-align: middle; /* Added for better alignment */
+      vertical-align: middle;
     `;
 
     for (const langCode in availableLanguages) {
@@ -178,8 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Other UI listeners
     themeToggleBtn.addEventListener('click', handleThemeToggle);
     languageSelect.addEventListener('change', handleLanguageChange);
-    optionsLink.addEventListener('click', (e) => {
-      e.preventDefault();
+    optionsBtn.addEventListener('click', () => {
       chrome.runtime.openOptionsPage();
     });
 
@@ -292,7 +292,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyTheme(theme) {
     currentTheme = theme;
     document.body.classList.toggle('theme-dark', theme === 'dark');
-    themeToggleBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
+    
+    // SVG Icons
+    const sunIcon = `<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><circle cx="12" cy="12" r="5" /><g><rect x="11" y="1" width="2" height="4" rx="1" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(45 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(90 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(135 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(180 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(225 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(270 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(315 12 12)" /></g></svg>`;
+    const moonIcon = `<svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>`;
+    
+    themeToggleBtn.innerHTML = theme === 'dark' ? moonIcon : sunIcon;
   }
 
   function applyLanguage(lang) {
@@ -300,8 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appName').textContent = strings[lang].appName;
     document.getElementById('temp-title').textContent = strings[lang].currentTab;
     document.getElementById('domain-title').textContent = strings[lang].siteWide;
-    document.getElementById('options-link').textContent = strings[lang].manageSettings;
-    // No longer updating a button text for language
+    
+    optionsBtn.title = strings[lang].manageSettings;
   }
 
   // --- Run ---

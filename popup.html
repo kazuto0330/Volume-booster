@@ -11,7 +11,7 @@
       --secondary-text-color: #7f8c8d;
       --accent-color: #3498db;
       --accent-hover-color: #2980b9;
-      --border-color: #bdc3c7;
+      --border-color: #d1d9df;
       --input-bg-color: #fff;
       --slider-track-color: #dfe6e9;
       --shadow-color: rgba(0,0,0,0.2);
@@ -23,7 +23,7 @@
       --secondary-text-color: #95a5a6;
       --accent-color: #3498db;
       --accent-hover-color: #4aa3df;
-      --border-color: #566573;
+      --border-color: #455361;
       --input-bg-color: #34495e;
       --slider-track-color: #50667b;
       --shadow-color: rgba(0,0,0,0.4);
@@ -117,36 +117,67 @@
     input[type="number"]:focus {
       outline: none; border-color: var(--accent-color);
     }
+    /* Footer Button Styles */
     .footer {
       margin-top: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      height: 36px;
     }
+    
     .settings-controls {
       display: flex;
-      gap: 10px; /* Adjust as needed for spacing */
+      gap: 4px;
       align-items: center;
     }
-    .settings-controls button {
-      background: none; border: none; cursor: pointer;
-      font-size: 20px; padding: 0px 5px 5px 0px;
+
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
       color: var(--secondary-text-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      width: 32px;
+      height: 32px;
     }
-    a#options-link {
-      color: var(--secondary-text-color);
-      font-size: 12px; text-decoration: none;
+    
+    .icon-btn:hover {
+      background-color: rgba(0,0,0,0.05);
+      color: var(--accent-color);
     }
-    a#options-link:hover {
-      color: var(--accent-color); text-decoration: underline;
+    
+    body.theme-dark .icon-btn:hover {
+      background-color: rgba(255,255,255,0.1);
     }
+
+    .icon-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* Language Select Styles */
+    #language-selector-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Target the select element dynamically created in JS */
+    /* Note: We will add a class 'lang-select' in JS to target this */
   </style>
 </head>
 <body>
   <h1 id="appName"></h1>
   <div id="current-domain-display"></div>
 
-  <div class="control-group">
+  <div id="control-group-domain" class="control-group">
     <div id="domain-title" class="control-group-title">Site-wide (saved)</div>
     <div class="controls-container">
       <input type="range" id="domain-boost-slider" min="0" max="600" value="100">
@@ -156,7 +187,7 @@
     </div>
   </div>
 
-  <div class="control-group">
+  <div id="control-group-temp" class="control-group">
     <div id="temp-title" class="control-group-title">Current Tab (temporary)</div>
     <div class="controls-container">
       <input type="range" id="temp-boost-slider" min="0" max="600" value="100">
@@ -167,13 +198,18 @@
   </div>
 
   <div class="footer">
-    <div class="settings-controls">
-      <button id="theme-toggle-btn">☀️</button>
-      <div id="language-selector-container">
-        <!-- Language dropdown will be inserted here by JavaScript -->
-      </div>
+    <div id="language-selector-container">
+      <!-- Language dropdown will be inserted here by JavaScript -->
     </div>
-    <a href="#" id="options-link"></a>
+    <div class="settings-controls">
+      <button id="theme-toggle-btn" class="icon-btn">
+        <!-- Default Sun Icon -->
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><circle cx="12" cy="12" r="5" /><g><rect x="11" y="1" width="2" height="4" rx="1" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(45 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(90 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(135 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(180 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(225 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(270 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(315 12 12)" /></g></svg>
+      </button>
+      <button id="options-btn" class="icon-btn">
+         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      </button>
+    </div>
   </div>
 
   <script src="strings.js"></script>
