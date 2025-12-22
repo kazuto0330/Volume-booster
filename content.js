@@ -80,6 +80,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       sendResponse({ status: "ok" });
     } else if (request.type === 'GET_CURRENT_VOLUME') {
       sendResponse({ boost: currentBoost });
+    } else if (request.type === 'URL_CHANGED') {
+      initializeFromStorage();
+      sendResponse({ status: "ok" });
     }
     return true; // 非同期レスポンスのためにtrueを返す
   });

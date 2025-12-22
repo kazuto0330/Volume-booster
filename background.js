@@ -35,6 +35,19 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     url = url.replace(/^www\./, '');
     const normalizedUrl = url;
 
+    // Try to notify existing content script first
+    chrome.tabs.sendMessage(tabId, { type: 'URL_CHANGED' }, (response) => {
+      if (chrome.runtime.lastError) {
+        // Content script not present, proceed to check settings and inject if needed
+        checkAndInject(tabId, normalizedUrl);
+      } else {
+        console.log(`Sent URL_CHANGED to tab ${tabId}`);
+      }
+    });
+  }
+});
+
+function checkAndInject(tabId, normalizedUrl) {
     // Get the saved settings
     chrome.storage.sync.get({ boostSettings: {} }, (data) => {
       const settings = data.boostSettings || {};
@@ -71,5 +84,4 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         });
       }
     });
-  }
-});
+}
