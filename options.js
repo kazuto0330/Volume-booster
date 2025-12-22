@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Event delegation for list items
     settingsList.addEventListener('click', handleListClick);
+    settingsList.addEventListener('dblclick', handleListDoubleClick);
     settingsList.addEventListener('change', handleListChange);
     
     themeToggleBtn.addEventListener('click', handleThemeToggle);
@@ -91,9 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteBtn = event.target.closest('.delete-icon-btn');
     if (deleteBtn) {
       const domainToDelete = deleteBtn.dataset.domain;
-      if (confirm(strings[currentLang].deleteConfirm(domainToDelete))) {
-        deleteSetting(domainToDelete);
-      }
+      deleteSetting(domainToDelete);
       return;
     }
     
@@ -109,6 +108,67 @@ document.addEventListener('DOMContentLoaded', () => {
       const newBoost = parseInt(event.target.value, 10);
       saveOrUpdateSetting(domainToUpdate, newBoost);
     }
+  }
+
+  function handleListDoubleClick(event) {
+    const domainDiv = event.target.closest('.col-domain');
+    if (!domainDiv || domainDiv.querySelector('input')) return;
+
+    const oldDomain = domainDiv.textContent;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = oldDomain;
+    input.className = 'edit-domain-input'; // Use for styling if needed, or rely on global input styles
+    
+    // Replace text with input
+    domainDiv.innerHTML = '';
+    domainDiv.appendChild(input);
+    input.focus();
+
+    // Handle save on blur or Enter
+    const save = () => {
+      const newDomain = cleanDomain(input.value);
+      if (newDomain && newDomain !== oldDomain) {
+        renameDomain(oldDomain, newDomain);
+      } else {
+        // Revert if empty or unchanged
+        domainDiv.textContent = oldDomain;
+      }
+    };
+
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        input.blur(); // Triggers save via blur event
+      } else if (e.key === 'Escape') {
+        // Cancel edit
+        input.removeEventListener('blur', save); // Prevent saving
+        domainDiv.textContent = oldDomain;
+      }
+    });
+  }
+
+  function renameDomain(oldDomain, newDomain) {
+    chrome.storage.sync.get({ boostSettings: {} }, (data) => {
+      const settings = data.boostSettings;
+      if (settings[newDomain]) {
+         // If target domain already exists, maybe warn or overwrite?
+         // For now, let's just overwrite/merge logic: 
+         // But wait, if we rename google.com to yahoo.com, and yahoo.com exists, 
+         // we overwrite yahoo.com's boost with google.com's boost? 
+         // Or keep yahoo.com's boost? 
+         // Usually renaming implies moving the value to the new key.
+      }
+      const boost = settings[oldDomain];
+      delete settings[oldDomain];
+      settings[newDomain] = boost;
+      
+      chrome.storage.sync.set({ boostSettings: settings }, () => {
+        renderSettingsList(settings);
+        notifyMatchingTabs(oldDomain, 100); // Reset old
+        notifyMatchingTabs(newDomain, boost); // Apply new
+      });
+    });
   }
 
   function handleThemeToggle() {
