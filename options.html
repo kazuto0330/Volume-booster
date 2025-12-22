@@ -5,175 +5,294 @@
   <meta charset="UTF-8">
   <style>
     :root {
-      --bg-color: #f4f7f9;
-      --text-color: #333;
-      --title-color: #2c3e50;
-      --secondary-text-color: #7f8c8d;
-      --accent-color: #3498db;
-      --accent-hover-color: #2980b9;
-      --border-color: #ccc;
-      --container-bg-color: #fff;
-      --table-header-bg-color: #ecf0f1;
-      --table-row-bg-color: #f9fafb;
-      --danger-color: #e74c3c;
-      --danger-hover-color: #c0392b;
-      --shadow-color: rgba(0,0,0,0.08);
+      --bg-color: #f8f9fa;
+      --text-color: #212529;
+      --title-color: #1a1a1a;
+      --secondary-text-color: #6c757d;
+      --accent-color: #007bff;
+      --accent-hover-color: #0056b3;
+      --border-color: #dee2e6;
+      --container-bg-color: #ffffff;
+      --item-bg-color: #ffffff;
+      --item-hover-bg-color: #f8f9fa;
+      --danger-color: #dc3545;
+      --danger-hover-color: #c82333;
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
     body.theme-dark {
-      --bg-color: #1f2933;
-      --text-color: #ecf0f1;
-      --title-color: #fff;
-      --secondary-text-color: #95a5a6;
-      --accent-color: #3498db;
-      --accent-hover-color: #4aa3df;
-      --border-color: #566573;
-      --container-bg-color: #2c3e50;
-      --table-header-bg-color: #34495e;
-      --table-row-bg-color: #3b5166;
-      --danger-color: #e74c3c;
-      --danger-hover-color: #f16a5c;
-      --shadow-color: rgba(0,0,0,0.25);
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --title-color: #ffffff;
+      --secondary-text-color: #a0a0a0;
+      --accent-color: #4dabf7;
+      --accent-hover-color: #339af0;
+      --border-color: #2d2d2d;
+      --container-bg-color: #1e1e1e;
+      --item-bg-color: #1e1e1e;
+      --item-hover-bg-color: #2c2c2c;
+      --danger-color: #ff6b6b;
+      --danger-hover-color: #fa5252;
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
     }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: var(--font-family);
       background-color: var(--bg-color);
       color: var(--text-color);
       margin: 0;
-      padding: 2em;
-      transition: background-color .2s, color .2s;
+      padding: 40px 20px;
+      min-height: 100vh;
+      box-sizing: border-box;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: var(--container-bg-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
     .header {
+      padding: 24px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 25px;
-    }
-    .settings-controls button {
-      background: none; border: none; cursor: pointer;
-      font-size: 24px; padding: 5px;
-      color: var(--secondary-text-color);
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: var(--container-bg-color);
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px var(--shadow-color);
+      border-bottom: 1px solid var(--border-color);
     }
     h1 {
       font-size: 24px;
-      font-weight: 600;
+      font-weight: 700;
       margin: 0;
       color: var(--title-color);
+      letter-spacing: -0.5px;
     }
-    .form-container {
+    .settings-controls {
       display: flex;
-      gap: 10px;
-      margin-bottom: 25px;
-      align-items: center; /* vertically align items */
+      gap: 12px;
     }
-    .form-container input[type="text"] {
-      flex-grow: 1;
-      padding: 10px;
-      font-size: 14px;
+    .icon-btn {
+      background: transparent;
       border: 1px solid var(--border-color);
-      border-radius: 6px;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-    }
-    .form-container input[type="text"]:focus {
-      outline: none;
-      border-color: var(--accent-color);
-    }
-    .boost-input-container {
+      cursor: pointer;
+      padding: 8px;
+      border-radius: var(--radius-md);
+      color: var(--secondary-text-color);
       display: flex;
       align-items: center;
-      gap: 5px;
+      justify-content: center;
+      transition: all 0.2s ease;
+      width: 40px;
+      height: 40px;
     }
-    .form-container button {
-      padding: 10px 20px;
+    .icon-btn:hover {
+      background-color: var(--item-hover-bg-color);
+      color: var(--text-color);
+      border-color: var(--secondary-text-color);
+    }
+    .icon-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* Content Area */
+    .content {
+      padding: 32px;
+    }
+
+    /* Form */
+    .form-container {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 40px;
+      align-items: center;
+      background-color: var(--item-hover-bg-color);
+      padding: 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+    .input-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .input-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input[type="text"], input[type="number"] {
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background-color: var(--container-bg-color);
+      color: var(--text-color);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+    .boost-input-wrapper {
+      position: relative;
+      width: 100px;
+    }
+    .boost-input-wrapper span {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--secondary-text-color);
       font-size: 14px;
-      font-weight: 500;
+      pointer-events: none;
+    }
+    .boost-input-wrapper input {
+      padding-right: 30px;
+      text-align: right;
+    }
+
+    .primary-btn {
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 600;
       cursor: pointer;
       background-color: var(--accent-color);
       color: white;
       border: none;
-      border-radius: 6px;
-      transition: background-color .2s;
+      border-radius: var(--radius-md);
+      transition: background-color 0.2s, transform 0.1s;
+      height: 44px;
+      align-self: flex-end;
+      display: flex;
+      align-items: center;
+      user-select: none;
     }
-    .form-container button:hover {
+    .primary-btn:hover {
       background-color: var(--accent-hover-color);
     }
-    table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0 8px;
+    .primary-btn:active {
+      transform: scale(0.98);
     }
-    th {
-      text-align: left;
+
+    /* List */
+    .list-header {
+      display: grid;
+      grid-template-columns: 1fr 120px 80px;
+      padding: 0 16px 12px;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 8px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--secondary-text-color);
-      padding: 0 8px 8px;
       text-transform: uppercase;
-      border-bottom: 2px solid var(--table-header-bg-color);
+      letter-spacing: 0.5px;
     }
-    td {
-      font-size: 1.1rem;
-      background-color: var(--table-row-bg-color);
-      padding: 12px;
-      vertical-align: middle;
-    }
-    tr td:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
-    tr td:last-child { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
-    .boost-input {
-      width: 60px;
-      padding: 8px;
-      text-align: right;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      margin-right: 5px;
-    }
-    .boost-input:focus {
-      outline: none;
-      border-color: var(--accent-color);
-    }
-    .headerAction{
+    .list-header > div {
       display: flex;
-      justify-content: end;
+      align-items: center;
     }
-    .delete-btn {
+    .list-header .col-action {
+      justify-content: flex-end;
+    }
+
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .setting-item {
+      display: grid;
+      grid-template-columns: 1fr 120px 80px;
+      align-items: center;
+      padding: 12px 16px;
+      background-color: var(--item-bg-color);
+      border-radius: var(--radius-md);
+      transition: background-color 0.2s;
+      border: 1px solid transparent;
+    }
+    .setting-item:hover {
+      background-color: var(--item-hover-bg-color);
+      border-color: var(--border-color);
+    }
+    .col-domain {
+      font-weight: 500;
+      word-break: break-all;
+      font-size: 17px;
+    }
+    .col-boost {
+       /* input styles handled by global input */
+    }
+    .col-action {
+      display: flex;
+      justify-content: flex-end;
+    }
+    
+    .delete-icon-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--secondary-text-color);
+      padding: 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .delete-icon-btn:hover {
+      background-color: rgba(220, 53, 69, 0.1);
       color: var(--danger-color);
-      cursor: pointer;
-      font-weight: 500;
-      font-size: 14px;
-      transition: color .2s;
     }
-    .delete-btn:hover {
-      color: var(--danger-hover-color);
+    .delete-icon-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
     }
+
+    /* Reset Section */
     .reset-container {
-      margin-top: 30px;
-      text-align: end;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
     }
-    .danger-button {
-      padding: 10px 20px;
+    .danger-btn {
+      background-color: transparent;
+      color: var(--danger-color);
+      border: 1px solid var(--danger-color);
+      padding: 8px 16px;
       font-size: 14px;
       font-weight: 500;
+      border-radius: var(--radius-md);
       cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .danger-btn:hover {
       background-color: var(--danger-color);
       color: white;
-      border: none;
-      border-radius: 6px;
-      transition: background-color .2s;
     }
-    .danger-button:hover {
-      background-color: var(--danger-hover-color);
-    }
-    /* Hide number input arrows */
+
+    /* Utilities */
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button {
       -webkit-appearance: none;
@@ -182,7 +301,14 @@
     input[type=number] {
       -moz-appearance: textfield;
     }
-    
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--secondary-text-color);
+        font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -190,35 +316,53 @@
     <div class="header">
       <h1 id="optionsTitle-h1"></h1>
       <div class="settings-controls">
-        <button id="theme-toggle-btn">☀️</button>
-        <button id="lang-toggle-btn">🇺🇸</button>
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">
+           <!-- Sun Icon -->
+           <svg viewBox="0 0 24 24" id="icon-sun" style="display:none;"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>
+           <!-- Moon Icon -->
+           <svg viewBox="0 0 24 24" id="icon-moon" style="display:none;"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+           <span id="theme-icon-container"></span>
+        </button>
+        <button id="lang-toggle-btn" class="icon-btn" title="Switch Language">
+            <!-- Language Icon -->
+           <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
+        </button>
       </div>
     </div>
 
-    <div class="form-container">
-      <input type="text" id="domain-input" placeholder="example.com">
-      <div class="boost-input-container">
-        <input type="number" id="boost-input" class="boost-input" min="0" max="600" value="150">
-        <span>%</span>
+    <div class="content">
+      <div class="form-container">
+        <div class="input-group">
+          <label id="labelDomain" for="domain-input"></label>
+          <input type="text" id="domain-input" placeholder="example.com">
+        </div>
+        <div class="input-group" style="flex: 0 0 120px;">
+          <label id="labelBoost" for="boost-input"></label>
+          <div class="boost-input-wrapper">
+             <input type="number" id="boost-input" min="0" max="600" value="150">
+             <span>%</span>
+          </div>
+        </div>
+        <button id="add-btn" class="primary-btn"></button>
       </div>
-      <button id="add-btn"></button>
-    </div>
 
-    <table id="settings-table">
-      <thead>
-        <tr>
-          <th id="headerDomain"></th>
-          <th id="headerBoost"></th>
-          <th id="headerAction"></th>
-        </tr>
-      </thead>
-      <tbody>
+      <div class="list-header">
+        <div id="headerDomain"></div>
+        <div id="headerBoost"></div>
+        <div id="headerAction" class="col-action"></div>
+      </div>
+      
+      <div id="settings-list" class="settings-list">
         <!-- Settings will be populated here -->
-      </tbody>
-    </table>
+      </div>
+      <div id="empty-state" class="empty-state" style="display:none;">
+          <!-- Empty state message will be injected by JS if needed -->
+          No settings found.
+      </div>
 
-    <div class="reset-container">
-      <button id="reset-settings-btn" class="danger-button"></button>
+      <div class="reset-container">
+        <button id="reset-settings-btn" class="danger-btn"></button>
+      </div>
     </div>
   </div>
 

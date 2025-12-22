@@ -3,23 +3,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const domainInput = document.getElementById('domain-input');
   const boostInput = document.getElementById('boost-input');
   const addButton = document.getElementById('add-btn');
-  const settingsTableBody = document.querySelector('#settings-table tbody');
+  const settingsList = document.getElementById('settings-list');
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const langToggleBtn = document.getElementById('lang-toggle-btn');
   const resetSettingsBtn = document.getElementById('reset-settings-btn');
+  
+  // Icons
+  const iconSun = document.getElementById('icon-sun');
+  const iconMoon = document.getElementById('icon-moon');
+
+  // Labels
+  const labelDomain = document.getElementById('labelDomain');
+  const labelBoost = document.getElementById('labelBoost');
+  const headerDomain = document.getElementById('headerDomain');
+  const headerBoost = document.getElementById('headerBoost');
+  const headerAction = document.getElementById('headerAction');
+  const emptyState = document.getElementById('empty-state');
 
   // State
   let currentLang = 'ja';
-  let currentTheme = 'dark'; // Default to dark mode
+  let currentTheme = 'dark';
 
   // --- Initialization ---
   function initialize() {
     chrome.storage.sync.get(['theme', 'language', 'boostSettings'], (settings) => {
-      currentTheme = settings.theme || 'dark'; // Default to dark
+      currentTheme = settings.theme || 'dark';
       currentLang = settings.language || 'ja';
       applyTheme(currentTheme);
       applyLanguage(currentLang);
-      renderTable(settings.boostSettings || {});
+      renderSettingsList(settings.boostSettings || {});
     });
 
     addEventListeners();
@@ -28,8 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Event Listeners ---
   function addEventListeners() {
     addButton.addEventListener('click', handleAdd);
-    settingsTableBody.addEventListener('click', handleTableClick);
-    settingsTableBody.addEventListener('change', handleTableChange);
+    
+    // Event delegation for list items
+    settingsList.addEventListener('click', handleListClick);
+    settingsList.addEventListener('change', handleListChange);
     
     themeToggleBtn.addEventListener('click', handleThemeToggle);
     langToggleBtn.addEventListener('click', handleLangToggle);
@@ -54,21 +68,25 @@ document.addEventListener('DOMContentLoaded', () => {
     boostInput.value = '150'; // Reset to default
   }
 
-  function handleTableClick(event) {
-    if (event.target.classList.contains('delete-btn')) {
-      const domainToDelete = event.target.dataset.domain;
+  function handleListClick(event) {
+    // Traverse up to find the button if clicked on SVG/Path
+    const deleteBtn = event.target.closest('.delete-icon-btn');
+    if (deleteBtn) {
+      const domainToDelete = deleteBtn.dataset.domain;
       if (confirm(strings[currentLang].deleteConfirm(domainToDelete))) {
         deleteSetting(domainToDelete);
       }
+      return;
     }
-    // Select text on click for number inputs in the table
-    if (event.target.classList.contains('table-boost-input')) {
+    
+    // Select text on click for number inputs
+    if (event.target.classList.contains('list-boost-input')) {
       event.target.select();
     }
   }
 
-  function handleTableChange(event) {
-    if (event.target.classList.contains('table-boost-input')) {
+  function handleListChange(event) {
+    if (event.target.classList.contains('list-boost-input')) {
       const domainToUpdate = event.target.dataset.domain;
       const newBoost = parseInt(event.target.value, 10);
       saveOrUpdateSetting(domainToUpdate, newBoost);
@@ -89,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentLang = newLang;
       applyLanguage(newLang);
       chrome.storage.sync.get({ boostSettings: {} }, (data) => {
-        renderTable(data.boostSettings);
+        renderSettingsList(data.boostSettings);
       });
       chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
     });
@@ -101,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chrome.runtime.lastError) {
           console.error("Error clearing storage: ", chrome.runtime.lastError);
         } else {
-          console.log("All settings cleared.");
           initialize(); 
           chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
         }
@@ -115,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert(strings[currentLang].alertDomain);
       return;
     }
-    if (isNaN(boost) || boost < 0 || boost > 600) { // Updated range
+    if (isNaN(boost) || boost < 0 || boost > 600) {
       alert(strings[currentLang].alertBoost);
       return;
     }
@@ -124,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const settings = data.boostSettings;
       settings[domain] = boost;
       chrome.storage.sync.set({ boostSettings: settings }, () => {
-        renderTable(settings);
+        renderSettingsList(settings);
         notifyMatchingTabs(domain, boost);
       });
     });
@@ -135,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const settings = data.boostSettings;
       delete settings[domain];
       chrome.storage.sync.set({ boostSettings: settings }, () => {
-        renderTable(settings);
+        renderSettingsList(settings);
         notifyMatchingTabs(domain, 100); // Reset to default
       });
     });
@@ -147,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!tab.url) return;
         
         let url = tab.url;
+        // Simple domain extraction matching the logic in popup/background
         url = url.replace(/^https?:\/\//, '');
         url = url.replace(/^www\./, '');
         
@@ -161,7 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isMatch) {
-          chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_VOLUME', boost: boost });
+          chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_VOLUME', boost: boost })
+            .catch(() => {}); // Ignore errors if content script not ready
         }
       });
     });
@@ -170,7 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- UI Updates ---
   function applyTheme(theme) {
     document.body.classList.toggle('theme-dark', theme === 'dark');
-    themeToggleBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
+    // Toggle icon visibility
+    if (theme === 'dark') {
+        iconMoon.style.display = 'block';
+        iconSun.style.display = 'none';
+    } else {
+        iconMoon.style.display = 'none';
+        iconSun.style.display = 'block';
+    }
   }
 
   function applyLanguage(lang) {
@@ -180,29 +206,50 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('optionsTitle-h1').textContent = s.optionsTitle;
     domainInput.placeholder = s.domainPlaceholder;
     addButton.textContent = s.add;
-    document.getElementById('headerDomain').textContent = s.headerDomain;
-    document.getElementById('headerBoost').textContent = s.headerBoost;
-    document.getElementById('headerAction').textContent = s.headerAction;
+    
+    // Update headers and labels
+    labelDomain.textContent = s.headerDomain;
+    labelBoost.textContent = s.headerBoost;
+    headerDomain.textContent = s.headerDomain;
+    headerBoost.textContent = s.headerBoost;
+    headerAction.textContent = s.headerAction;
+    
     resetSettingsBtn.textContent = s.resetAllSettings;
-    langToggleBtn.textContent = lang === 'ja' ? '🇺🇸' : '🇯🇵';
   }
 
-  function renderTable(settings) {
-    settingsTableBody.innerHTML = '';
-    for (const domain in settings) {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${domain}</td>
-        <td>
-          <div class="boost-input-container">
-            <input type="number" class="boost-input table-boost-input" min="0" max="600" value="${settings[domain]}" data-domain="${domain}">
-            <span>%</span>
-          </div>
-        </td>
-        <td><span class="delete-btn" data-domain="${domain}">${strings[currentLang].deleteAction}</span></td>
-      `;
-      settingsTableBody.appendChild(row);
+  function renderSettingsList(settings) {
+    settingsList.innerHTML = '';
+    const domains = Object.keys(settings);
+    
+    if (domains.length === 0) {
+        emptyState.style.display = 'block';
+        return;
     }
+    emptyState.style.display = 'none';
+
+    domains.forEach(domain => {
+      const item = document.createElement('div');
+      item.className = 'setting-item';
+      
+      // Trash Icon SVG
+      const trashIcon = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+
+      item.innerHTML = `
+        <div class="col-domain">${domain}</div>
+        <div class="col-boost">
+          <div class="boost-input-wrapper">
+             <input type="number" class="list-boost-input" min="0" max="600" value="${settings[domain]}" data-domain="${domain}">
+             <span>%</span>
+          </div>
+        </div>
+        <div class="col-action">
+          <button class="delete-icon-btn" data-domain="${domain}" title="${strings[currentLang].deleteAction}">
+            ${trashIcon}
+          </button>
+        </div>
+      `;
+      settingsList.appendChild(item);
+    });
   }
 
   // --- Run ---
