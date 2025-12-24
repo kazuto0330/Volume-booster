@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentLang = 'ja';
   let currentTheme = 'dark';
   let ytLiveSettings = { enabled: false, targetVolume: 100 };
+  let ytSaveTimer;
 
   // --- Initialization ---
   function initialize() {
@@ -96,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ytSlider.addEventListener('change', () => {
             saveYtLiveSettings();
         });
+        ytSlider.addEventListener('wheel', handleYtSliderWheel);
     }
 
     if (ytToggle) {
@@ -116,6 +118,41 @@ document.addEventListener('DOMContentLoaded', () => {
     return value.trim()
       .replace(/^https?:\/\//, '')
       .replace(/^www\./, '');
+  }
+
+  function handleYtSliderWheel(event) {
+    const slider = event.target;
+    event.preventDefault();
+    const currentValue = parseInt(slider.value, 10);
+    let step = 0;
+
+    if (event.deltaY < 0) { // Scrolling up
+      step = currentValue < 100 ? 10 : 20;
+    } else { // Scrolling down
+      step = currentValue <= 100 ? -10 : -20;
+    }
+
+    let newValue = currentValue + step;
+    
+    // Clamp value
+    if (newValue < 0) newValue = 0;
+    if (newValue > 600) newValue = 600;
+    
+    if (newValue !== currentValue) {
+        slider.value = newValue;
+        
+        // Update display
+        const ytValueDisplay = document.getElementById('yt-live-value-display');
+        if (ytValueDisplay) {
+            ytValueDisplay.textContent = `${newValue}%`;
+        }
+
+        // Debounced save
+        clearTimeout(ytSaveTimer);
+        ytSaveTimer = setTimeout(() => {
+            saveYtLiveSettings();
+        }, 500);
+    }
   }
 
   function handleAdd() {
