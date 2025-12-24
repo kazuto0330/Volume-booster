@@ -77,6 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
         initialize();
       }
     });
+
+    // Slider value display logic (UI only for now)
+    const ytSlider = document.getElementById('yt-live-slider');
+    const ytValueDisplay = document.getElementById('yt-live-value-display');
+    if (ytSlider && ytValueDisplay) {
+        ytSlider.addEventListener('input', () => {
+            ytValueDisplay.textContent = `${ytSlider.value}%`;
+        });
+    }
   }
 
   // --- Handlers ---
@@ -334,6 +343,19 @@ document.addEventListener('DOMContentLoaded', () => {
     headerAction.textContent = s.headerAction;
     
     resetSettingsBtn.textContent = s.resetAllSettings;
+
+    // New Sections Localization
+    const generalSettingsHeader = document.getElementById('generalSettingsHeader');
+    if (generalSettingsHeader) generalSettingsHeader.textContent = s.generalSettings;
+
+    const youtubeLiveSettingsHeader = document.getElementById('youtubeLiveSettingsHeader');
+    if (youtubeLiveSettingsHeader) youtubeLiveSettingsHeader.textContent = s.youtubeLiveSettings;
+
+    const labelEnableYoutubeLive = document.getElementById('labelEnableYoutubeLive');
+    if (labelEnableYoutubeLive) labelEnableYoutubeLive.textContent = s.enableYoutubeLiveLowering;
+
+    const labelTargetVolume = document.getElementById('labelTargetVolume');
+    if (labelTargetVolume) labelTargetVolume.textContent = s.targetVolume;
   }
 
   function renderSettingsList(settings) {

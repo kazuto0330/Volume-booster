@@ -21,6 +21,11 @@ const strings = {
     alertBoost: "ブースト率には0から600までの数値を入力してください。",
     resetAllSettings: "すべての設定をリセット",
     resetConfirm: "すべての設定をリセットしてもよろしいですか？この操作は元に戻せません。",
+    // New Settings
+    generalSettings: "一般設定",
+    youtubeLiveSettings: "YouTube Live設定",
+    enableYoutubeLiveLowering: "YouTubeライブでは音量を下げる",
+    targetVolume: "目標音量"
   },
   en: {
     // General
@@ -43,6 +48,11 @@ const strings = {
     alertDomain: "Please enter a domain name.",
     alertBoost: "Please enter a boost value between 0 and 600.",
     resetAllSettings: "Reset All Settings",
-    resetConfirm: "Are you sure you want to reset all settings? This cannot be undone."
+    resetConfirm: "Are you sure you want to reset all settings? This cannot be undone.",
+    // New Settings
+    generalSettings: "General Settings",
+    youtubeLiveSettings: "YouTube Live Settings",
+    enableYoutubeLiveLowering: "Lower volume on YouTube Live",
+    targetVolume: "Target Volume"
   }
 };

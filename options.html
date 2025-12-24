@@ -52,34 +52,75 @@
     }
 
     .container {
-      max-width: 800px;
+      max-width: 1000px; /* Increased width for 2 columns */
       margin: 0 auto;
-      background-color: var(--container-bg-color);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-md);
-      overflow: hidden;
+      background-color: transparent; /* Container itself is transparent now */
       display: flex;
       flex-direction: column;
+      gap: 24px;
     }
 
     /* Header */
     .header {
-      padding: 24px 32px;
+      padding: 0 0 16px 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border-color);
+      /* border-bottom: 1px solid var(--border-color); Removed border */
     }
     h1 {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: 700;
       margin: 0;
       color: var(--title-color);
       letter-spacing: -0.5px;
     }
-    .settings-controls {
-      display: flex;
-      gap: 12px;
+
+    /* Layout */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+    @media (max-width: 768px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .left-panel, .right-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    /* Cards */
+    .panel-card {
+        background-color: var(--container-bg-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 24px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+    .panel-card h2 {
+        font-size: 18px;
+        margin: 0 0 16px 0;
+        color: var(--title-color);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 12px;
+    }
+
+    /* Icon Buttons (General Settings) */
+    .settings-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+    .settings-row:last-child {
+        margin-bottom: 0;
     }
     .icon-btn {
       background: transparent;
@@ -106,16 +147,11 @@
       fill: currentColor;
     }
 
-    /* Content Area */
-    .content {
-      padding: 32px;
-    }
-
     /* Form */
     .form-container {
       display: flex;
       gap: 16px;
-      margin-bottom: 40px;
+      margin-bottom: 24px;
       align-items: center;
       background-color: var(--item-hover-bg-color);
       padding: 20px;
@@ -237,39 +273,15 @@
       word-break: break-all;
       font-size: 17px;
     }
-    .col-boost {
-       /* input styles handled by global input */
-    }
+    
     .col-action {
       display: flex;
       justify-content: flex-end;
     }
     
-    .delete-icon-btn {
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: var(--secondary-text-color);
-      padding: 8px;
-      border-radius: 50%;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .delete-icon-btn:hover {
-      background-color: rgba(220, 53, 69, 0.1);
-      color: var(--danger-color);
-    }
-    .delete-icon-btn svg {
-      width: 18px;
-      height: 18px;
-      fill: currentColor;
-    }
-
     /* Reset Section */
     .reset-container {
-      margin-top: 40px;
+      margin-top: 24px;
       padding-top: 24px;
       border-top: 1px solid var(--border-color);
       display: flex;
@@ -371,7 +383,6 @@
       background-color: rgba(220, 53, 69, 0.05);
     }
     
-    /* Edit input override */
     .edit-domain-input {
       width: 100%;
       padding: 4px 8px;
@@ -380,60 +391,172 @@
       border-radius: 4px;
       box-sizing: border-box;
     }
+
+    /* Toggle Switch */
+    .toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 24px;
+    }
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--border-color);
+        transition: .4s;
+        border-radius: 24px;
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    input:checked + .slider {
+        background-color: var(--accent-color);
+    }
+    input:checked + .slider:before {
+        transform: translateX(24px);
+    }
+    .toggle-label {
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--text-color);
+    }
+
+    /* Range Slider */
+    .range-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .range-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--secondary-text-color);
+        text-transform: uppercase;
+        display: flex;
+        justify-content: space-between;
+    }
+    input[type=range] {
+        width: 100%;
+        margin: 8px 0;
+        cursor: pointer;
+        accent-color: var(--accent-color);
+    }
+
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <h1 id="optionsTitle-h1"></h1>
-      <div class="settings-controls">
-        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">
-           <!-- Sun Icon -->
-           <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" id="icon-sun" style="display:none;"><circle cx="12" cy="12" r="5" /><g><rect x="11" y="1" width="2" height="4" rx="1" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(45 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(90 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(135 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(180 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(225 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(270 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(315 12 12)" /></g></svg>
-           <!-- Moon Icon -->
-           <svg viewBox="0 0 24 24" id="icon-moon" style="display:none;"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
-           <span id="theme-icon-container"></span>
-        </button>
-        <button id="lang-toggle-btn" class="icon-btn" title="Switch Language">
-            <!-- Language Icon -->
-           <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
-        </button>
-      </div>
     </div>
 
-    <div class="content">
-      <div class="form-container">
-        <div class="input-group">
-          <label id="labelDomain" for="domain-input"></label>
-          <input type="text" id="domain-input" placeholder="example.com">
-        </div>
-        <div class="input-group" style="flex: 0 0 120px;">
-          <label id="labelBoost" for="boost-input"></label>
-          <div class="boost-input-wrapper">
-             <input type="number" id="boost-input" min="0" max="600" value="150">
-             <span>%</span>
-          </div>
-        </div>
-        <button id="add-btn" class="primary-btn"></button>
-      </div>
+    <div class="content-grid">
+        <!-- LEFT PANEL -->
+        <div class="left-panel">
+            <div class="panel-card">
+                 <!-- Domain Input Form -->
+                <div class="form-container">
+                    <div class="input-group">
+                    <label id="labelDomain" for="domain-input"></label>
+                    <input type="text" id="domain-input" placeholder="example.com">
+                    </div>
+                    <div class="input-group" style="flex: 0 0 120px;">
+                    <label id="labelBoost" for="boost-input"></label>
+                    <div class="boost-input-wrapper">
+                        <input type="number" id="boost-input" min="0" max="600" value="150">
+                        <span>%</span>
+                    </div>
+                    </div>
+                    <button id="add-btn" class="primary-btn"></button>
+                </div>
 
-      <div class="list-header">
-        <div id="headerDomain"></div>
-        <div id="headerBoost"></div>
-        <div id="headerAction" class="col-action"></div>
-      </div>
-      
-      <div id="settings-list" class="settings-list">
-        <!-- Settings will be populated here -->
-      </div>
-      <div id="empty-state" class="empty-state" style="display:none;">
-          <!-- Empty state message will be injected by JS if needed -->
-          No settings found.
-      </div>
+                <!-- Domain List -->
+                <div class="list-header">
+                    <div id="headerDomain"></div>
+                    <div id="headerBoost"></div>
+                    <div id="headerAction" class="col-action"></div>
+                </div>
+                
+                <div id="settings-list" class="settings-list">
+                    <!-- Settings will be populated here -->
+                </div>
+                <div id="empty-state" class="empty-state" style="display:none; padding: 20px; text-align: center; color: var(--secondary-text-color);">
+                    No settings found.
+                </div>
 
-      <div class="reset-container">
-        <button id="reset-settings-btn" class="danger-btn"></button>
-      </div>
+                <div class="reset-container">
+                    <button id="reset-settings-btn" class="danger-btn"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="right-panel">
+            
+            <!-- General Settings -->
+            <div class="panel-card">
+                <h2 id="generalSettingsHeader">General Settings</h2>
+                <div class="settings-row">
+                    <span class="toggle-label">Theme</span>
+                    <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">
+                        <!-- Sun Icon -->
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" id="icon-sun" style="display:none;"><circle cx="12" cy="12" r="5" /><g><rect x="11" y="1" width="2" height="4" rx="1" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(45 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(90 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(135 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(180 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(225 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(270 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(315 12 12)" /></g></svg>
+                        <!-- Moon Icon -->
+                        <svg viewBox="0 0 24 24" id="icon-moon" style="display:none;"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+                    </button>
+                </div>
+                <div class="settings-row">
+                    <span class="toggle-label">Language</span>
+                     <button id="lang-toggle-btn" class="icon-btn" title="Switch Language">
+                        <!-- Language Icon -->
+                        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- YouTube Live Settings -->
+            <div class="panel-card">
+                <h2 id="youtubeLiveSettingsHeader">YouTube Live Settings</h2>
+                <div class="toggle-container">
+                    <span id="labelEnableYoutubeLive" class="toggle-label">Enable Feature</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="yt-live-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="range-container">
+                    <div class="range-label">
+                        <span id="labelTargetVolume">Target Volume</span>
+                        <span id="yt-live-value-display">100%</span>
+                    </div>
+                    <input type="range" id="yt-live-slider" min="0" max="600" value="100">
+                </div>
+            </div>
+
+        </div>
     </div>
   </div>
 
