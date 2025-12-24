@@ -116,14 +116,14 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     function checkLiveStatusViaInjection() {
       return new Promise((resolve) => {
           if (!window.location.hostname.includes('youtube.com')) {
-              resolve(false);
+              resolve({ isLive: false, videoId: null });
               return;
           }
   
           const listener = (event) => {
               if (event.source === window && event.data.type === 'VOLUME_BOOSTER_LIVE_STATUS_RESULT') {
                   window.removeEventListener('message', listener);
-                  resolve(event.data.isLive);
+                  resolve({ isLive: event.data.isLive, videoId: event.data.videoId });
               }
           };
           window.addEventListener('message', listener);
@@ -139,35 +139,32 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
           // Timeout fallback
           setTimeout(() => {
               window.removeEventListener('message', listener);
-              resolve(false); // Default to false on timeout
+              resolve({ isLive: false, videoId: null }); // Default to false on timeout
           }, 1000);
       });
+    }
+
+    function getYouTubeVideoId(url) {
+        try {
+            const u = new URL(url);
+            const vParam = u.searchParams.get('v');
+            if (vParam) return vParam;
+            
+            const pathSegments = u.pathname.split('/').filter(p => p);
+            if (pathSegments.length >= 2 && (pathSegments[0] === 'shorts' || pathSegments[0] === 'live')) {
+                return pathSegments[1];
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        return null;
     }
   
     // YouTube用: ライブ状態の変化を監視する (Re-run check on navigation/update)
     let liveObserver = null;
     function startLiveObserver(settings, ytSettings) {
         if (liveObserver) liveObserver.disconnect();
-        if (!window.location.hostname.includes('youtube.com') || !ytSettings.enabled) return;
-  
-        const targetNode = document.querySelector('title') || document.body;
-        
-        // YouTube updates the title or other attributes on navigation.
-        // We can also just rely on URL_CHANGED from background.js, 
-        // but a local observer helps with in-page updates that might not trigger URL change immediately 
-        // or if we want to catch "switching to live" status.
-        // However, injecting script repeatedly on every mutation is bad.
-        // We will rely on URL_CHANGED and periodic check if needed, 
-        // or simple check when title changes.
-        
-        liveObserver = new MutationObserver(async () => {
-           // Debounce or check infrequently?
-           // Actually, let's just trust initializeFromStorage called by URL_CHANGED.
-           // But sometimes the player response updates AFTER the url change.
-           // Let's try a delayed check or check when specific elements appear.
-        });
-        // For now, we rely on the logic in initializeFromStorage being triggered by URL_CHANGED.
-        // If that's not enough, we can add a retry mechanism in initializeFromStorage.
+        // Observer logic removed/simplified as we rely on URL_CHANGED
     }
   
     // ページ読み込み時に保存された設定を適用
@@ -179,22 +176,42 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 100 };
         
         // 1. YouTube Live Check (Highest Priority)
+        let isLive = false;
         // Check if feature enabled AND we are on YouTube
         if (ytSettings.enabled && window.location.hostname.includes('youtube.com')) {
-            // Add a small delay/retry to allow player to update on SPA nav
-            let isLive = await checkLiveStatusViaInjection();
+            const targetVideoId = getYouTubeVideoId(window.location.href);
             
-            if (!isLive) {
-               // Retry once after a short delay in case of slow update
-               await new Promise(r => setTimeout(r, 1500));
-               isLive = await checkLiveStatusViaInjection();
+            if (targetVideoId) {
+                let attempts = 0;
+                while (attempts < 10) {
+                    const status = await checkLiveStatusViaInjection();
+                    
+                    if (status.videoId === targetVideoId) {
+                        isLive = status.isLive;
+                        console.log(`Volume Booster: Video ID match (${status.videoId}). Live status: ${isLive}`);
+                        break;
+                    } else {
+                        console.log(`Volume Booster: Video ID mismatch (Target: ${targetVideoId}, Player: ${status.videoId}). Retrying...`);
+                    }
+                    
+                    await new Promise(r => setTimeout(r, 500));
+                    attempts++;
+                }
             }
-  
-            if (isLive) {
-                console.log(`Volume Booster: YouTube Live detected (via injection). Applying target volume: ${ytSettings.targetVolume}%`);
-                applyBoost(ytSettings.targetVolume);
-                return;
-            }
+        }
+
+        if (isLive) {
+            console.log(`Volume Booster: YouTube Live detected. Applying target volume: ${ytSettings.targetVolume}%`);
+            sessionStorage.setItem('volumeBoosterIsLiveAutoBoost', 'true');
+            applyBoost(ytSettings.targetVolume);
+            return;
+        }
+
+        // YouTube Liveから遷移した場合、キャッシュされたブーストをリセット
+        if (sessionStorage.getItem('volumeBoosterIsLiveAutoBoost') === 'true') {
+             console.log("Volume Booster: Resetting boost from YouTube Live.");
+             sessionStorage.removeItem('volumeBoosterCache');
+             sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost');
         }
         
         // 2. Domain Match Logic (Existing)      let bestMatchKey = null;
