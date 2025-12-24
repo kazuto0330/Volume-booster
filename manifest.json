@@ -23,5 +23,11 @@
     "default_title": "Volume Booster",
     "default_popup": "popup.html",
     "default_icon": "icon.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["*://*.youtube.com/*"]
+    }
+  ]
 }

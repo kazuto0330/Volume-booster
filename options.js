@@ -23,15 +23,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // State
   let currentLang = 'ja';
   let currentTheme = 'dark';
+  let ytLiveSettings = { enabled: false, targetVolume: 100 };
 
   // --- Initialization ---
   function initialize() {
-    chrome.storage.sync.get(['theme', 'language', 'boostSettings'], (settings) => {
+    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'ytLiveSettings'], (settings) => {
       currentTheme = settings.theme || 'dark';
       currentLang = settings.language || 'ja';
+      ytLiveSettings = settings.ytLiveSettings || { enabled: false, targetVolume: 100 };
+      
       applyTheme(currentTheme);
       applyLanguage(currentLang);
       renderSettingsList(settings.boostSettings || {});
+      
+      // Update YT Live UI
+      const ytToggle = document.getElementById('yt-live-toggle');
+      const ytSlider = document.getElementById('yt-live-slider');
+      const ytValueDisplay = document.getElementById('yt-live-value-display');
+      
+      if (ytToggle) ytToggle.checked = ytLiveSettings.enabled;
+      if (ytSlider) ytSlider.value = ytLiveSettings.targetVolume;
+      if (ytValueDisplay) ytValueDisplay.textContent = `${ytLiveSettings.targetVolume}%`;
     });
 
     addEventListeners();
@@ -72,20 +84,31 @@ document.addEventListener('DOMContentLoaded', () => {
       domainInput.value = cleanDomain(domainInput.value);
     });
 
+    // Slider value display logic
+    const ytSlider = document.getElementById('yt-live-slider');
+    const ytValueDisplay = document.getElementById('yt-live-value-display');
+    const ytToggle = document.getElementById('yt-live-toggle');
+
+    if (ytSlider && ytValueDisplay) {
+        ytSlider.addEventListener('input', () => {
+            ytValueDisplay.textContent = `${ytSlider.value}%`;
+        });
+        ytSlider.addEventListener('change', () => {
+            saveYtLiveSettings();
+        });
+    }
+
+    if (ytToggle) {
+        ytToggle.addEventListener('change', () => {
+            saveYtLiveSettings();
+        });
+    }
+
     chrome.runtime.onMessage.addListener((request) => {
       if (request.type === 'SETTINGS_UPDATED') {
         initialize();
       }
     });
-
-    // Slider value display logic (UI only for now)
-    const ytSlider = document.getElementById('yt-live-slider');
-    const ytValueDisplay = document.getElementById('yt-live-value-display');
-    if (ytSlider && ytValueDisplay) {
-        ytSlider.addEventListener('input', () => {
-            ytValueDisplay.textContent = `${ytSlider.value}%`;
-        });
-    }
   }
 
   // --- Handlers ---
@@ -311,6 +334,25 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(() => {}); // Ignore errors if content script not ready
         }
       });
+    });
+  }
+
+  function saveYtLiveSettings() {
+    const ytToggle = document.getElementById('yt-live-toggle');
+    const ytSlider = document.getElementById('yt-live-slider');
+    
+    const settings = {
+        enabled: ytToggle.checked,
+        targetVolume: parseInt(ytSlider.value, 10)
+    };
+    
+    chrome.storage.sync.set({ ytLiveSettings: settings }, () => {
+         // Notify tabs (especially YouTube tabs) about the setting change
+         chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+         // Also direct message active tabs to re-check immediately
+         chrome.tabs.query({url: "*://*.youtube.com/*"}, (tabs) => {
+             tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'SETTINGS_UPDATED' }));
+         });
     });
   }
 

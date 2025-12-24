@@ -89,6 +89,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     } else if (request.type === 'URL_CHANGED') {
       initializeFromStorage();
       sendResponse({ status: "ok" });
+    } else if (request.type === 'SETTINGS_UPDATED') {
+      initializeFromStorage();
+      sendResponse({ status: "ok" });
     }
     return true; // 非同期レスポンスのためにtrueを返す
   });
@@ -109,14 +112,92 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     return ['/', '?', '#'].includes(nextChar);
   }
 
-  // ページ読み込み時に保存された設定を適用
-  async function initializeFromStorage() {
-    const currentUrl = getNormalizedUrl();
-    try {
-      const data = await chrome.storage.sync.get({ boostSettings: {} });
-      const settings = data.boostSettings || {};
-      
-      let bestMatchKey = null;
+    // YouTube Live 判定 (Inject Script to access page context)
+    function checkLiveStatusViaInjection() {
+      return new Promise((resolve) => {
+          if (!window.location.hostname.includes('youtube.com')) {
+              resolve(false);
+              return;
+          }
+  
+          const listener = (event) => {
+              if (event.source === window && event.data.type === 'VOLUME_BOOSTER_LIVE_STATUS_RESULT') {
+                  window.removeEventListener('message', listener);
+                  resolve(event.data.isLive);
+              }
+          };
+          window.addEventListener('message', listener);
+  
+          // Inject script
+          const script = document.createElement('script');
+          script.src = chrome.runtime.getURL('inject.js');
+          script.onload = function() {
+              this.remove();
+          };
+          (document.head || document.documentElement).appendChild(script);
+  
+          // Timeout fallback
+          setTimeout(() => {
+              window.removeEventListener('message', listener);
+              resolve(false); // Default to false on timeout
+          }, 1000);
+      });
+    }
+  
+    // YouTube用: ライブ状態の変化を監視する (Re-run check on navigation/update)
+    let liveObserver = null;
+    function startLiveObserver(settings, ytSettings) {
+        if (liveObserver) liveObserver.disconnect();
+        if (!window.location.hostname.includes('youtube.com') || !ytSettings.enabled) return;
+  
+        const targetNode = document.querySelector('title') || document.body;
+        
+        // YouTube updates the title or other attributes on navigation.
+        // We can also just rely on URL_CHANGED from background.js, 
+        // but a local observer helps with in-page updates that might not trigger URL change immediately 
+        // or if we want to catch "switching to live" status.
+        // However, injecting script repeatedly on every mutation is bad.
+        // We will rely on URL_CHANGED and periodic check if needed, 
+        // or simple check when title changes.
+        
+        liveObserver = new MutationObserver(async () => {
+           // Debounce or check infrequently?
+           // Actually, let's just trust initializeFromStorage called by URL_CHANGED.
+           // But sometimes the player response updates AFTER the url change.
+           // Let's try a delayed check or check when specific elements appear.
+        });
+        // For now, we rely on the logic in initializeFromStorage being triggered by URL_CHANGED.
+        // If that's not enough, we can add a retry mechanism in initializeFromStorage.
+    }
+  
+    // ページ読み込み時に保存された設定を適用
+    async function initializeFromStorage() {
+      const currentUrl = getNormalizedUrl();
+      try {
+        const data = await chrome.storage.sync.get({ boostSettings: {}, ytLiveSettings: { enabled: false, targetVolume: 100 } });
+        const settings = data.boostSettings || {};
+        const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 100 };
+        
+        // 1. YouTube Live Check (Highest Priority)
+        // Check if feature enabled AND we are on YouTube
+        if (ytSettings.enabled && window.location.hostname.includes('youtube.com')) {
+            // Add a small delay/retry to allow player to update on SPA nav
+            let isLive = await checkLiveStatusViaInjection();
+            
+            if (!isLive) {
+               // Retry once after a short delay in case of slow update
+               await new Promise(r => setTimeout(r, 1500));
+               isLive = await checkLiveStatusViaInjection();
+            }
+  
+            if (isLive) {
+                console.log(`Volume Booster: YouTube Live detected (via injection). Applying target volume: ${ytSettings.targetVolume}%`);
+                applyBoost(ytSettings.targetVolume);
+                return;
+            }
+        }
+        
+        // 2. Domain Match Logic (Existing)      let bestMatchKey = null;
       let maxLen = -1;
 
       for (const key in settings) {
