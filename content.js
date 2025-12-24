@@ -28,6 +28,12 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   // 指定されたブースト率を適用
   function applyBoost(boost) {
     currentBoost = boost; // 値を更新
+    try {
+      sessionStorage.setItem('volumeBoosterCache', boost);
+    } catch (e) {
+      // sessionStorage might be unavailable
+    }
+
     if (!gainNode) {
       // gainNodeがない場合、AudioContextのセットアップがまだ
       setupAudioContext();
@@ -123,10 +129,30 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       }
 
       if (bestMatchKey) {
-        console.log(`Volume Booster: Found saved setting for ${bestMatchKey} (applied to ${currentUrl}).`);
-        applyBoost(settings[bestMatchKey]);
+        const previousMatchKey = sessionStorage.getItem('volumeBoosterMatchKey');
+        const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
+        
+        // Save current match key for next navigation
+        sessionStorage.setItem('volumeBoosterMatchKey', bestMatchKey);
+
+        if (previousMatchKey === bestMatchKey && cachedBoost) {
+          console.log(`Volume Booster: Keeping temporary setting ${cachedBoost}% (same domain setting ${bestMatchKey}).`);
+          applyBoost(parseInt(cachedBoost, 10));
+        } else {
+          console.log(`Volume Booster: Found saved setting for ${bestMatchKey} (applied to ${currentUrl}).`);
+          applyBoost(settings[bestMatchKey]);
+        }
       } else {
-        applyBoost(100); // デフォルト値
+        // Clear match key as there is no specific setting
+        sessionStorage.removeItem('volumeBoosterMatchKey');
+
+        const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
+        if (cachedBoost) {
+          console.log(`Volume Booster: Restoring cached setting: ${cachedBoost}%`);
+          applyBoost(parseInt(cachedBoost, 10));
+        } else {
+          applyBoost(100); // デフォルト値
+        }
       }
     } catch (e) {
       console.error("Volume Booster: Error reading from storage.", e);
