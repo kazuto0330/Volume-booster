@@ -6,6 +6,7 @@ const strings = {
     // Popup
     currentTab: "現在のタブのみ",
     siteWide: "サイト全体",
+    accountSpecific: (name) => `アカウント (${name})`,
     statusUnsupported: "このページでは使用できません。",
     // Options
     optionsTitle: "音量ブースター設定",
@@ -34,6 +35,7 @@ const strings = {
     // Popup
     currentTab: "Current Tab Only",
     siteWide: "Site-wide",
+    accountSpecific: (name) => `Account (${name})`,
     statusUnsupported: "Not available on this page.",
     // Options
     optionsTitle: "Volume Booster Settings",

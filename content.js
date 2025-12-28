@@ -9,6 +9,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   const mediaElements = new WeakMap();
   let domObserver = null;
   let currentBoost = 100; // 現在のブースト値を保持
+  let currentAccountName = null; // 現在のYouTubeアカウント名を保持
 
   // Web Audio APIのセットアップ
   function setupAudioContext() {
@@ -85,7 +86,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       applyBoost(request.boost);
       sendResponse({ status: "ok" });
     } else if (request.type === 'GET_CURRENT_VOLUME') {
-      sendResponse({ boost: currentBoost });
+      sendResponse({ boost: currentBoost, accountName: currentAccountName });
     } else if (request.type === 'URL_CHANGED') {
       initializeFromStorage();
       sendResponse({ status: "ok" });
@@ -110,6 +111,22 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     if (url.length === key.length) return true;
     const nextChar = url[key.length];
     return ['/', '?', '#'].includes(nextChar);
+  }
+
+  // YouTube Account Info via oEmbed
+  async function getAccountInfo() {
+      if (!window.location.hostname.includes('youtube.com')) return null;
+      if (!location.href.match(/youtube\.com\/(watch|shorts|live)/)) return null;
+
+      try {
+          const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(window.location.href)}&format=json`;
+          const response = await fetch(oembedUrl);
+          if (!response.ok) return null;
+          const data = await response.json();
+          return data.author_name;
+      } catch (e) {
+          return null;
+      }
   }
 
     // YouTube Live 判定 (Inject Script to access page context)
@@ -171,8 +188,13 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     async function initializeFromStorage() {
       const currentUrl = getNormalizedUrl();
       try {
-        const data = await chrome.storage.sync.get({ boostSettings: {}, ytLiveSettings: { enabled: false, targetVolume: 100 } });
+        const data = await chrome.storage.sync.get({ 
+            boostSettings: {}, 
+            accountSettings: {},
+            ytLiveSettings: { enabled: false, targetVolume: 100 } 
+        });
         const settings = data.boostSettings || {};
+        const accountSettings = data.accountSettings || {};
         const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 100 };
         
         // 1. YouTube Live Check (Highest Priority)
@@ -214,44 +236,62 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost');
         }
         
-        // 2. Domain Match Logic (Existing)      let bestMatchKey = null;
-      let maxLen = -1;
+        // Determine Setting Source
+        let targetBoost = null;
+        let matchKey = null;
 
-      for (const key in settings) {
-        if (isMatch(key, currentUrl)) {
-          if (key.length > maxLen) {
-            maxLen = key.length;
-            bestMatchKey = key;
-          }
+        // 2. Account Check (High Priority)
+        currentAccountName = await getAccountInfo();
+        if (currentAccountName) {
+            const accountKey = `youtube:${currentAccountName}`;
+            if (accountSettings[accountKey] !== undefined) {
+                targetBoost = accountSettings[accountKey];
+                matchKey = accountKey;
+            }
         }
-      }
 
-      if (bestMatchKey) {
-        const previousMatchKey = sessionStorage.getItem('volumeBoosterMatchKey');
-        const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
-        
-        // Save current match key for next navigation
-        sessionStorage.setItem('volumeBoosterMatchKey', bestMatchKey);
+        // 3. Domain Match Logic (Low Priority - only if no account setting found)
+        if (targetBoost === null) {
+            let maxLen = -1;
+            for (const key in settings) {
+                if (isMatch(key, currentUrl)) {
+                    if (key.length > maxLen) {
+                        maxLen = key.length;
+                        matchKey = key;
+                    }
+                }
+            }
+            if (matchKey) {
+                targetBoost = settings[matchKey];
+            }
+        }
 
-        if (previousMatchKey === bestMatchKey && cachedBoost) {
-          console.log(`Volume Booster: Keeping temporary setting ${cachedBoost}% (same domain setting ${bestMatchKey}).`);
-          applyBoost(parseInt(cachedBoost, 10));
+        // Apply Logic
+        if (matchKey) {
+            const previousMatchKey = sessionStorage.getItem('volumeBoosterMatchKey');
+            const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
+            
+            sessionStorage.setItem('volumeBoosterMatchKey', matchKey);
+
+            if (previousMatchKey === matchKey && cachedBoost) {
+                console.log(`Volume Booster: Keeping temporary setting ${cachedBoost}% (same key ${matchKey}).`);
+                applyBoost(parseInt(cachedBoost, 10));
+            } else {
+                console.log(`Volume Booster: Found saved setting for ${matchKey}: ${targetBoost}%`);
+                applyBoost(targetBoost);
+            }
         } else {
-          console.log(`Volume Booster: Found saved setting for ${bestMatchKey} (applied to ${currentUrl}).`);
-          applyBoost(settings[bestMatchKey]);
-        }
-      } else {
-        // Clear match key as there is no specific setting
-        sessionStorage.removeItem('volumeBoosterMatchKey');
+            // Clear match key as there is no specific setting
+            sessionStorage.removeItem('volumeBoosterMatchKey');
 
-        const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
-        if (cachedBoost) {
-          console.log(`Volume Booster: Restoring cached setting: ${cachedBoost}%`);
-          applyBoost(parseInt(cachedBoost, 10));
-        } else {
-          applyBoost(100); // デフォルト値
+            const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
+            if (cachedBoost) {
+                console.log(`Volume Booster: Restoring cached setting: ${cachedBoost}%`);
+                applyBoost(parseInt(cachedBoost, 10));
+            } else {
+                applyBoost(100); // デフォルト値
+            }
         }
-      }
     } catch (e) {
       console.error("Volume Booster: Error reading from storage.", e);
     }

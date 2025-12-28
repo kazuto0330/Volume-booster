@@ -5,6 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const domainSlider = document.getElementById('domain-boost-slider');
   const domainNumberInput = document.getElementById('domain-boost-input');
   
+  // Account Control Elements
+  const accountGroup = document.getElementById('control-group-account');
+  const accountSlider = document.getElementById('account-boost-slider');
+  const accountNumberInput = document.getElementById('account-boost-input');
+  const accountTitle = document.getElementById('account-title');
+
   const optionsBtn = document.getElementById('options-btn');
 
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -17,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // State
   let currentTab = null;
   let currentDomain = null;
+  let currentAccountName = null;
   let debounceTimer;
   let currentLang = 'en'; // Default to English
   let currentTheme = 'light';
@@ -139,9 +146,25 @@ document.addEventListener('DOMContentLoaded', () => {
               // content.jsが未注入の場合、ドメイン設定値をフォールバックとして使用
               updateControls(tempSlider, tempNumberInput, domainBoost);
               console.log("Content script not ready, using domain setting as fallback.");
+              accountGroup.style.display = 'none';
             } else {
               // content.jsから取得した現在の値を使用
               updateControls(tempSlider, tempNumberInput, response.boost);
+
+              if (response.accountName) {
+                currentAccountName = response.accountName;
+                accountGroup.style.display = 'block';
+                accountTitle.textContent = strings[currentLang].accountSpecific(currentAccountName);
+                
+                chrome.storage.sync.get({ accountSettings: {} }, (accData) => {
+                    const accSettings = accData.accountSettings || {};
+                    const accKey = `youtube:${currentAccountName}`;
+                    const accBoost = accSettings[accKey] ?? 100;
+                    updateControls(accountSlider, accountNumberInput, accBoost);
+                });
+              } else {
+                accountGroup.style.display = 'none';
+              }
             }
           });
         });
@@ -168,13 +191,19 @@ document.addEventListener('DOMContentLoaded', () => {
     domainSlider.addEventListener('input', () => handleDomainChange(domainSlider.value));
     domainNumberInput.addEventListener('input', () => handleDomainChange(domainNumberInput.value));
 
+    // Account listeners
+    accountSlider.addEventListener('input', () => handleAccountChange(accountSlider.value));
+    accountNumberInput.addEventListener('input', () => handleAccountChange(accountNumberInput.value));
+
     // Select text on click for number inputs
     tempNumberInput.addEventListener('click', (e) => e.target.select());
     domainNumberInput.addEventListener('click', (e) => e.target.select());
+    accountNumberInput.addEventListener('click', (e) => e.target.select());
 
     // Mouse wheel listeners for sliders
     tempSlider.addEventListener('wheel', (e) => handleSliderWheel(e, tempSlider, handleTempChange));
     domainSlider.addEventListener('wheel', (e) => handleSliderWheel(e, domainSlider, handleDomainChange));
+    accountSlider.addEventListener('wheel', (e) => handleSliderWheel(e, accountSlider, handleAccountChange));
 
     // Other UI listeners
     themeToggleBtn.addEventListener('click', handleThemeToggle);
@@ -219,6 +248,28 @@ document.addEventListener('DOMContentLoaded', () => {
     updateControls(tempSlider, tempNumberInput, boost);
     applyBoostToTab(boost);
     saveDomainBoost(boost);
+  }
+
+  function handleAccountChange(value) {
+    const boost = sanitizeBoostValue(value);
+    updateControls(accountSlider, accountNumberInput, boost);
+    updateControls(tempSlider, tempNumberInput, boost);
+    applyBoostToTab(boost);
+    saveAccountBoost(boost);
+  }
+
+  function saveAccountBoost(boost) {
+    if (!currentAccountName) return;
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      chrome.storage.sync.get({ accountSettings: {} }, (data) => {
+        const settings = data.accountSettings || {};
+        const key = `youtube:${currentAccountName}`;
+        settings[key] = boost;
+        chrome.storage.sync.set({ accountSettings: settings });
+      });
+    }, 500);
   }
 
   function handleThemeToggle() {
@@ -287,6 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tempNumberInput.disabled = !enabled;
     domainSlider.disabled = !enabled;
     domainNumberInput.disabled = !enabled;
+    accountSlider.disabled = !enabled;
+    accountNumberInput.disabled = !enabled;
   }
 
   function applyTheme(theme) {
