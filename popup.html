@@ -171,6 +171,50 @@
 
     /* Target the select element dynamically created in JS */
     /* Note: We will add a class 'lang-select' in JS to target this */
+
+    .control-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .control-group-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--secondary-text-color);
+      margin-bottom: 0; /* Reset margin */
+    }
+    .reset-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 2px;
+        color: var(--secondary-text-color);
+        opacity: 0.6;
+        transition: opacity 0.2s, color 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .reset-btn:hover {
+        opacity: 1;
+        color: #e74c3c; /* Red color for delete/reset */
+    }
+    .reset-btn svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+    }
+    .active-indicator {
+        font-size: 10px;
+        background-color: var(--accent-color);
+        color: #fff;
+        padding: 1px 4px;
+        border-radius: 4px;
+        margin-left: 8px;
+        display: none; /* Hidden by default */
+        font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -178,7 +222,15 @@
   <div id="current-domain-display"></div>
 
   <div id="control-group-domain" class="control-group">
-    <div id="domain-title" class="control-group-title">Site-wide (saved)</div>
+    <div class="control-header">
+        <div style="display:flex; align-items:center;">
+            <div id="domain-title" class="control-group-title">Site-wide (saved)</div>
+            <span id="domain-active" class="active-indicator">ACTIVE</span>
+        </div>
+        <button id="domain-reset-btn" class="reset-btn" title="Reset">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+    </div>
     <div class="controls-container">
       <input type="range" id="domain-boost-slider" min="0" max="600" value="100">
       <div class="number-input-wrapper">
@@ -188,7 +240,15 @@
   </div>
 
   <div id="control-group-account" class="control-group" style="display: none;">
-    <div id="account-title" class="control-group-title">Account (saved)</div>
+    <div class="control-header">
+         <div style="display:flex; align-items:center;">
+            <div id="account-title" class="control-group-title">Account (saved)</div>
+            <span id="account-active" class="active-indicator">ACTIVE</span>
+         </div>
+         <button id="account-reset-btn" class="reset-btn" title="Reset">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+         </button>
+    </div>
     <div class="controls-container">
       <input type="range" id="account-boost-slider" min="0" max="600" value="100">
       <div class="number-input-wrapper">

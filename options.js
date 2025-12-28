@@ -20,6 +20,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const headerAction = document.getElementById('headerAction');
   const emptyState = document.getElementById('empty-state');
 
+  // Account Settings Elements
+  const accountSettingsList = document.getElementById('account-settings-list');
+  const accountEmptyState = document.getElementById('account-empty-state');
+  const accountSettingsHeader = document.getElementById('accountSettingsHeader');
+  const headerAccount = document.getElementById('headerAccount');
+  const headerBoostAccount = document.getElementById('headerBoostAccount');
+  const headerActionAccount = document.getElementById('headerActionAccount');
+
   // State
   let currentLang = 'ja';
   let currentTheme = 'dark';
@@ -28,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Initialization ---
   function initialize() {
-    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'ytLiveSettings'], (settings) => {
+    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'accountSettings', 'ytLiveSettings'], (settings) => {
       currentTheme = settings.theme || 'dark';
       currentLang = settings.language || 'ja';
       ytLiveSettings = settings.ytLiveSettings || { enabled: false, targetVolume: 100 };
@@ -36,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       applyTheme(currentTheme);
       applyLanguage(currentLang);
       renderSettingsList(settings.boostSettings || {});
+      renderAccountSettingsList(settings.accountSettings || {});
       
       // Update YT Live UI
       const ytToggle = document.getElementById('yt-live-toggle');
@@ -58,6 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsList.addEventListener('click', handleListClick);
     settingsList.addEventListener('dblclick', handleListDoubleClick);
     settingsList.addEventListener('change', handleListChange);
+
+    // Event delegation for account list items
+    accountSettingsList.addEventListener('click', handleAccountListClick);
+    accountSettingsList.addEventListener('change', handleAccountListChange);
     
     // Global click to close dropdowns
     document.addEventListener('click', (event) => {
@@ -435,6 +448,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const labelTargetVolume = document.getElementById('labelTargetVolume');
     if (labelTargetVolume) labelTargetVolume.textContent = s.targetVolume;
+
+    // Account Settings Localization
+    if (accountSettingsHeader) accountSettingsHeader.textContent = s.accountSettings;
+    if (headerAccount) headerAccount.textContent = s.headerAccount;
+    if (headerBoostAccount) headerBoostAccount.textContent = s.headerBoost;
+    if (headerActionAccount) headerActionAccount.textContent = s.headerAction;
   }
 
   function renderSettingsList(settings) {
@@ -480,6 +499,109 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       settingsList.appendChild(item);
     });
+  }
+
+  function renderAccountSettingsList(settings) {
+    accountSettingsList.innerHTML = '';
+    const accounts = Object.keys(settings);
+    
+    if (accounts.length === 0) {
+        accountEmptyState.style.display = 'block';
+        return;
+    }
+    accountEmptyState.style.display = 'none';
+
+    accounts.forEach(key => {
+      const item = document.createElement('div');
+      item.className = 'setting-item';
+      
+      // Extract account name from key "youtube:AccountName"
+      const accountName = key.replace('youtube:', '');
+      
+      // Kebab Icon SVG
+      const kebabIcon = `<svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>`;
+
+      item.innerHTML = `
+        <div class="col-domain">${accountName}</div>
+        <div class="col-boost">
+          <div class="boost-input-wrapper">
+             <input type="number" class="list-boost-input" min="0" max="600" value="${settings[key]}" data-key="${key}">
+             <span>%</span>
+          </div>
+        </div>
+        <div class="col-action">
+          <div class="menu-container">
+            <button class="kebab-menu-btn" title="Menu">
+              ${kebabIcon}
+            </button>
+            <div class="dropdown-menu">
+               <button class="dropdown-item danger delete-action" data-key="${key}">
+                 <span>${strings[currentLang].deleteAction}</span>
+               </button>
+            </div>
+          </div>
+        </div>
+      `;
+      accountSettingsList.appendChild(item);
+    });
+  }
+
+  function handleAccountListClick(event) {
+    // 1. Handle Kebab Menu Button Click
+    const menuBtn = event.target.closest('.kebab-menu-btn');
+    if (menuBtn) {
+      const container = menuBtn.closest('.menu-container');
+      const dropdown = container.querySelector('.dropdown-menu');
+      
+      document.querySelectorAll('.dropdown-menu.show').forEach(d => {
+        if (d !== dropdown) d.classList.remove('show');
+      });
+
+      dropdown.classList.toggle('show');
+      return;
+    }
+
+    // 2. Handle Delete Action
+    const deleteBtn = event.target.closest('.delete-action');
+    if (deleteBtn) {
+      const keyToDelete = deleteBtn.dataset.key;
+      deleteAccountSetting(keyToDelete);
+      closeAllDropdowns();
+      return;
+    }
+    
+    if (event.target.classList.contains('list-boost-input')) {
+      event.target.select();
+    }
+  }
+
+  function handleAccountListChange(event) {
+    if (event.target.classList.contains('list-boost-input')) {
+      const keyToUpdate = event.target.dataset.key;
+      const newBoost = parseInt(event.target.value, 10);
+      
+      chrome.storage.sync.get({ accountSettings: {} }, (data) => {
+        const settings = data.accountSettings || {};
+        settings[keyToUpdate] = newBoost;
+        chrome.storage.sync.set({ accountSettings: settings }, () => {
+             // Ideally notify tabs, but account matching is complex from here without knowing current URL/account.
+             // Just reload to update UI. Content script will pick up on next load/message.
+             // Actually we can send global update message
+             chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+        });
+      });
+    }
+  }
+
+  function deleteAccountSetting(key) {
+      chrome.storage.sync.get({ accountSettings: {} }, (data) => {
+          const settings = data.accountSettings || {};
+          delete settings[key];
+          chrome.storage.sync.set({ accountSettings: settings }, () => {
+              renderAccountSettingsList(settings);
+              chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+          });
+      });
   }
 
   // --- Run ---

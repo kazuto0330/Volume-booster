@@ -511,6 +511,25 @@
                     <button id="reset-settings-btn" class="danger-btn"></button>
                 </div>
             </div>
+
+            <!-- Account List -->
+            <div class="panel-card" style="margin-top: 24px;">
+                <h2>
+                    <span id="accountSettingsHeader">Account Settings</span>
+                </h2>
+                <div class="list-header">
+                    <div id="headerAccount">Account Name</div>
+                    <div id="headerBoostAccount">Boost %</div>
+                    <div id="headerActionAccount" class="col-action">Action</div>
+                </div>
+                
+                <div id="account-settings-list" class="settings-list">
+                    <!-- Account Settings will be populated here -->
+                </div>
+                <div id="account-empty-state" class="empty-state" style="display:none; padding: 20px; text-align: center; color: var(--secondary-text-color);">
+                    No account settings found.
+                </div>
+            </div>
         </div>
 
         <!-- RIGHT PANEL -->

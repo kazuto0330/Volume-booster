@@ -10,6 +10,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   let domObserver = null;
   let currentBoost = 100; // 現在のブースト値を保持
   let currentAccountName = null; // 現在のYouTubeアカウント名を保持
+  let activeSource = 'default'; // 現在適用されている設定のソース ('live', 'account', 'domain', 'default')
 
   // Web Audio APIのセットアップ
   function setupAudioContext() {
@@ -86,7 +87,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       applyBoost(request.boost);
       sendResponse({ status: "ok" });
     } else if (request.type === 'GET_CURRENT_VOLUME') {
-      sendResponse({ boost: currentBoost, accountName: currentAccountName });
+      sendResponse({ boost: currentBoost, accountName: currentAccountName, activeSource: activeSource });
     } else if (request.type === 'URL_CHANGED') {
       initializeFromStorage();
       sendResponse({ status: "ok" });
@@ -197,6 +198,10 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         const accountSettings = data.accountSettings || {};
         const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 100 };
         
+        let targetBoost = null;
+        let source = 'default';
+        let matchKey = null;
+
         // 1. YouTube Live Check (Highest Priority)
         let isLive = false;
         // Check if feature enabled AND we are on YouTube
@@ -222,9 +227,13 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             }
         }
 
+        // Always try to get account name if on YouTube, regardless of Live status
+        currentAccountName = await getAccountInfo();
+
         if (isLive) {
             console.log(`Volume Booster: YouTube Live detected. Applying target volume: ${ytSettings.targetVolume}%`);
             sessionStorage.setItem('volumeBoosterIsLiveAutoBoost', 'true');
+            activeSource = 'live';
             applyBoost(ytSettings.targetVolume);
             return;
         }
@@ -236,17 +245,13 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost');
         }
         
-        // Determine Setting Source
-        let targetBoost = null;
-        let matchKey = null;
-
         // 2. Account Check (High Priority)
-        currentAccountName = await getAccountInfo();
         if (currentAccountName) {
             const accountKey = `youtube:${currentAccountName}`;
             if (accountSettings[accountKey] !== undefined) {
                 targetBoost = accountSettings[accountKey];
                 matchKey = accountKey;
+                source = 'account';
             }
         }
 
@@ -258,6 +263,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
                     if (key.length > maxLen) {
                         maxLen = key.length;
                         matchKey = key;
+                        source = 'domain';
                     }
                 }
             }
@@ -276,9 +282,15 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             if (previousMatchKey === matchKey && cachedBoost) {
                 console.log(`Volume Booster: Keeping temporary setting ${cachedBoost}% (same key ${matchKey}).`);
                 applyBoost(parseInt(cachedBoost, 10));
+                // If the cached value is different from the saved value, it's effectively a temp override
+                // But for source tracking, we can consider it 'temp' or keep the original source
+                // Let's keep the source as 'account' or 'domain' but maybe we should denote it's modified?
+                // For now, simple source tracking.
+                activeSource = source; 
             } else {
                 console.log(`Volume Booster: Found saved setting for ${matchKey}: ${targetBoost}%`);
                 applyBoost(targetBoost);
+                activeSource = source;
             }
         } else {
             // Clear match key as there is no specific setting
@@ -288,8 +300,10 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             if (cachedBoost) {
                 console.log(`Volume Booster: Restoring cached setting: ${cachedBoost}%`);
                 applyBoost(parseInt(cachedBoost, 10));
+                activeSource = 'temp'; // Or just default/manual
             } else {
                 applyBoost(100); // デフォルト値
+                activeSource = 'default';
             }
         }
     } catch (e) {

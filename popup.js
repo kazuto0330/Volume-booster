@@ -11,6 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const accountNumberInput = document.getElementById('account-boost-input');
   const accountTitle = document.getElementById('account-title');
 
+  // Reset Buttons & Indicators
+  const domainResetBtn = document.getElementById('domain-reset-btn');
+  const accountResetBtn = document.getElementById('account-reset-btn');
+  const domainActiveIndicator = document.getElementById('domain-active');
+  const accountActiveIndicator = document.getElementById('account-active');
+
   const optionsBtn = document.getElementById('options-btn');
 
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -147,14 +153,26 @@ document.addEventListener('DOMContentLoaded', () => {
               updateControls(tempSlider, tempNumberInput, domainBoost);
               console.log("Content script not ready, using domain setting as fallback.");
               accountGroup.style.display = 'none';
+              domainActiveIndicator.style.display = 'none';
+              accountActiveIndicator.style.display = 'none';
             } else {
               // content.jsから取得した現在の値を使用
               updateControls(tempSlider, tempNumberInput, response.boost);
+              
+              const activeSource = response.activeSource;
+              domainActiveIndicator.style.display = (activeSource === 'domain') ? 'inline-block' : 'none';
 
               if (response.accountName) {
                 currentAccountName = response.accountName;
                 accountGroup.style.display = 'block';
                 accountTitle.textContent = strings[currentLang].accountSpecific(currentAccountName);
+                
+                // Show active indicator if source is account OR live (since live overrides account but is specific to this context)
+                // However, user specifically asked to show when account boost is applied.
+                // If live is active, maybe we shouldn't show account as active? Or show it differently?
+                // The prompt said: "when account-specific boost is applied, tell user".
+                // So if source is 'account', show it.
+                accountActiveIndicator.style.display = (activeSource === 'account') ? 'inline-block' : 'none';
                 
                 chrome.storage.sync.get({ accountSettings: {} }, (accData) => {
                     const accSettings = accData.accountSettings || {};
@@ -164,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
               } else {
                 accountGroup.style.display = 'none';
+                accountActiveIndicator.style.display = 'none';
               }
             }
           });
@@ -194,6 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Account listeners
     accountSlider.addEventListener('input', () => handleAccountChange(accountSlider.value));
     accountNumberInput.addEventListener('input', () => handleAccountChange(accountNumberInput.value));
+
+    // Reset Listeners
+    domainResetBtn.addEventListener('click', handleDomainReset);
+    accountResetBtn.addEventListener('click', handleAccountReset);
 
     // Select text on click for number inputs
     tempNumberInput.addEventListener('click', (e) => e.target.select());
@@ -272,6 +295,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
   }
 
+  function handleDomainReset() {
+      if (!currentDomain) return;
+      chrome.storage.sync.get({ boostSettings: {} }, (data) => {
+          const settings = data.boostSettings || {};
+          if (settings[currentDomain]) {
+              delete settings[currentDomain];
+              chrome.storage.sync.set({ boostSettings: settings }, () => {
+                  initialize(); // Reload to reflect changes
+                  chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+                  // Also reset current tab volume if it was using this setting? 
+                  // Ideally initialize() will handle re-evaluating the correct volume.
+              });
+          }
+      });
+  }
+
+  function handleAccountReset() {
+      if (!currentAccountName) return;
+      const key = `youtube:${currentAccountName}`;
+      chrome.storage.sync.get({ accountSettings: {} }, (data) => {
+          const settings = data.accountSettings || {};
+          if (settings[key]) {
+              delete settings[key];
+              chrome.storage.sync.set({ accountSettings: settings }, () => {
+                   initialize();
+                   chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+              });
+          }
+      });
+  }
+
   function handleThemeToggle() {
     const newTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
     chrome.storage.sync.set({ theme: newTheme }, () => {
@@ -340,6 +394,9 @@ document.addEventListener('DOMContentLoaded', () => {
     domainNumberInput.disabled = !enabled;
     accountSlider.disabled = !enabled;
     accountNumberInput.disabled = !enabled;
+    
+    domainResetBtn.disabled = !enabled;
+    accountResetBtn.disabled = !enabled;
   }
 
   function applyTheme(theme) {
@@ -360,6 +417,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('domain-title').textContent = strings[lang].siteWide;
     
     optionsBtn.title = strings[lang].manageSettings;
+    
+    domainActiveIndicator.textContent = strings[lang].active;
+    accountActiveIndicator.textContent = strings[lang].active;
+    domainResetBtn.title = strings[lang].reset;
+    accountResetBtn.title = strings[lang].reset;
   }
 
   // --- Run ---
