@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let debounceTimer;
   let currentLang = 'en'; // Default to English
   let currentTheme = 'light';
+  
+  // Active Status Flags
+  let hasAccountSetting = false;
+  let hasDomainSetting = false;
 
   // Available languages with display names
   const availableLanguages = {
@@ -171,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
           domainTitle.textContent = strings[currentLang].siteWide;
 
           const domainBoost = settings[currentDomain] ?? 100;
+          hasDomainSetting = settings[currentDomain] !== undefined; // Check if domain setting exists
           updateControls(domainSlider, domainNumberInput, domainBoost);
 
           // 2. content.jsから現在のタブの音量を取得し、一時スライダーを設定
@@ -186,30 +191,29 @@ document.addEventListener('DOMContentLoaded', () => {
               // content.jsから取得した現在の値を使用
               updateControls(tempSlider, tempNumberInput, response.boost);
               
-              const activeSource = response.activeSource;
-              domainActiveIndicator.style.display = (activeSource === 'domain') ? 'inline-block' : 'none';
-
               if (response.accountName) {
                 currentAccountName = response.accountName;
                 accountGroup.style.display = 'block';
                 accountTitle.textContent = strings[currentLang].accountSpecific(currentAccountName);
                 
-                // Show active indicator if source is account OR live (since live overrides account but is specific to this context)
-                // However, user specifically asked to show when account boost is applied.
-                // If live is active, maybe we shouldn't show account as active? Or show it differently?
-                // The prompt said: "when account-specific boost is applied, tell user".
-                // So if source is 'account', show it.
-                accountActiveIndicator.style.display = (activeSource === 'account') ? 'inline-block' : 'none';
-                
                 chrome.storage.sync.get({ accountSettings: {} }, (accData) => {
                     const accSettings = accData.accountSettings || {};
                     const accKey = `youtube:${currentAccountName}`;
-                    const accBoost = accSettings[accKey] ?? 100;
-                    updateControls(accountSlider, accountNumberInput, accBoost);
+                    
+                    if (accSettings[accKey] !== undefined) {
+                        hasAccountSetting = true;
+                        updateControls(accountSlider, accountNumberInput, accSettings[accKey]);
+                    } else {
+                        hasAccountSetting = false;
+                        // Use domain setting as default if no account setting
+                        updateControls(accountSlider, accountNumberInput, domainBoost);
+                    }
+                    updateActiveIndicators();
                 });
               } else {
                 accountGroup.style.display = 'none';
                 accountActiveIndicator.style.display = 'none';
+                updateActiveIndicators();
               }
             }
           });
@@ -305,7 +309,15 @@ document.addEventListener('DOMContentLoaded', () => {
     updateControls(domainSlider, domainNumberInput, boost);
     // ドメイン設定を変更したら、一時設定もそれに追従させる
     updateControls(tempSlider, tempNumberInput, boost);
+    
+    // Also update account slider if account setting doesn't exist
+    if (!hasAccountSetting) {
+        updateControls(accountSlider, accountNumberInput, boost);
+    }
+
     applyBoostToTab(boost);
+    hasDomainSetting = true; // Mark as having a setting (being edited/saved)
+    updateActiveIndicators();
     saveDomainBoost(boost);
   }
 
@@ -314,6 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateControls(accountSlider, accountNumberInput, boost);
     updateControls(tempSlider, tempNumberInput, boost);
     applyBoostToTab(boost);
+    hasAccountSetting = true; // Mark as having a setting
+    updateActiveIndicators();
     saveAccountBoost(boost);
   }
 
@@ -338,10 +352,14 @@ document.addEventListener('DOMContentLoaded', () => {
           if (settings[currentDomain]) {
               delete settings[currentDomain];
               chrome.storage.sync.set({ boostSettings: settings }, () => {
-                  initialize(); // Reload to reflect changes
+                  hasDomainSetting = false;
+                  updateActiveIndicators();
+                  // Note: We don't fully re-initialize here to avoid UI jump, 
+                  // but ideally we should refresh values. 
+                  // For now, let's at least update indicators.
+                  // Re-initializing ensures correct fallback values are loaded.
+                  initialize(); 
                   chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
-                  // Also reset current tab volume if it was using this setting? 
-                  // Ideally initialize() will handle re-evaluating the correct volume.
               });
           }
       });
@@ -355,11 +373,24 @@ document.addEventListener('DOMContentLoaded', () => {
           if (settings[key]) {
               delete settings[key];
               chrome.storage.sync.set({ accountSettings: settings }, () => {
+                   hasAccountSetting = false;
+                   updateActiveIndicators();
                    initialize();
                    chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
               });
           }
       });
+  }
+
+  function updateActiveIndicators() {
+      domainActiveIndicator.style.display = 'none';
+      accountActiveIndicator.style.display = 'none';
+      
+      if (hasAccountSetting) {
+          accountActiveIndicator.style.display = 'inline-block';
+      } else if (hasDomainSetting) {
+          domainActiveIndicator.style.display = 'inline-block';
+      }
   }
 
   function handleThemeToggle() {
