@@ -293,17 +293,33 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
                 activeSource = source;
             }
         } else {
-            // Clear match key as there is no specific setting
-            sessionStorage.removeItem('volumeBoosterMatchKey');
-
-            const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
-            if (cachedBoost) {
-                console.log(`Volume Booster: Restoring cached setting: ${cachedBoost}%`);
-                applyBoost(parseInt(cachedBoost, 10));
-                activeSource = 'temp'; // Or just default/manual
-            } else {
-                applyBoost(100); // デフォルト値
+            // No specific setting found
+            const previousMatchKey = sessionStorage.getItem('volumeBoosterMatchKey');
+            
+            // If we had a match key previously but now we don't, it means we transitioned 
+            // from a managed context (Account/Domain) to an unmanaged one.
+            // In this case, we should NOT restore the cache (which belongs to the managed context),
+            // but instead reset to default.
+            if (previousMatchKey) {
+                console.log("Volume Booster: Transitioned from managed to unmanaged context. Resetting to default.");
+                sessionStorage.removeItem('volumeBoosterCache');
+                sessionStorage.removeItem('volumeBoosterMatchKey');
+                applyBoost(100);
                 activeSource = 'default';
+            } else {
+                // If we didn't have a match key previously either, then any cache is a manual user override
+                // that should persist.
+                sessionStorage.removeItem('volumeBoosterMatchKey'); // Ensure it's cleared
+                
+                const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
+                if (cachedBoost) {
+                    console.log(`Volume Booster: Restoring cached setting: ${cachedBoost}%`);
+                    applyBoost(parseInt(cachedBoost, 10));
+                    activeSource = 'temp'; 
+                } else {
+                    applyBoost(100); // デフォルト値
+                    activeSource = 'default';
+                }
             }
         }
     } catch (e) {

@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function initializeLanguageSelector() {
+    languageSelectorContainer.innerHTML = ''; // Clear existing content to prevent duplicates
     languageSelect = document.createElement('select');
     languageSelect.id = 'language-select';
     languageSelect.style.cssText = `
