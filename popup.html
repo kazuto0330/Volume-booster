@@ -215,6 +215,50 @@
         display: none; /* Hidden by default */
         font-weight: bold;
     }
+
+    /* Reset Menu Styles */
+    .reset-menu-container {
+      position: relative;
+    }
+    .reset-menu {
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      width: 200px;
+      background-color: var(--input-bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      box-shadow: var(--shadow-color) 0px 4px 12px;
+      display: none;
+      flex-direction: column;
+      z-index: 100;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .reset-menu.show {
+      display: flex;
+    }
+    .reset-menu-item {
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text-color);
+      background: none;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      width: 100%;
+    }
+    .reset-menu-item:hover {
+      background-color: rgba(0,0,0,0.05);
+    }
+    body.theme-dark .reset-menu-item:hover {
+      background-color: rgba(255,255,255,0.1);
+    }
+    .reset-menu-item:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
   </style>
 </head>
 <body>
@@ -227,9 +271,6 @@
             <div id="domain-title" class="control-group-title">Site-wide (saved)</div>
             <span id="domain-active" class="active-indicator">ACTIVE</span>
         </div>
-        <button id="domain-reset-btn" class="reset-btn" title="Reset">
-            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        </button>
     </div>
     <div class="controls-container">
       <input type="range" id="domain-boost-slider" min="0" max="600" value="100">
@@ -245,9 +286,6 @@
             <div id="account-title" class="control-group-title">Account (saved)</div>
             <span id="account-active" class="active-indicator">ACTIVE</span>
          </div>
-         <button id="account-reset-btn" class="reset-btn" title="Reset">
-            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-         </button>
     </div>
     <div class="controls-container">
       <input type="range" id="account-boost-slider" min="0" max="600" value="100">
@@ -272,6 +310,14 @@
       <!-- Language dropdown will be inserted here by JavaScript -->
     </div>
     <div class="settings-controls">
+      <div class="reset-menu-container">
+          <button id="global-reset-btn" class="icon-btn" title="Reset Settings">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+          <div id="reset-menu" class="reset-menu">
+              <!-- Menu items injected by JS -->
+          </div>
+      </div>
       <button id="theme-toggle-btn" class="icon-btn">
         <!-- Default Sun Icon -->
         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><circle cx="12" cy="12" r="5" /><g><rect x="11" y="1" width="2" height="4" rx="1" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(45 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(90 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(135 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(180 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(225 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(270 12 12)" /><rect x="11" y="1" width="2" height="4" rx="1" transform="rotate(315 12 12)" /></g></svg>

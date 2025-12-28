@@ -12,8 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const accountTitle = document.getElementById('account-title');
 
   // Reset Buttons & Indicators
-  const domainResetBtn = document.getElementById('domain-reset-btn');
-  const accountResetBtn = document.getElementById('account-reset-btn');
+  const globalResetBtn = document.getElementById('global-reset-btn');
+  const resetMenu = document.getElementById('reset-menu');
+  let domainResetItem; // Will be created dynamically
+  let accountResetItem; // Will be created dynamically
+  
   const domainActiveIndicator = document.getElementById('domain-active');
   const accountActiveIndicator = document.getElementById('account-active');
 
@@ -43,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Initialization ---
   function initialize() {
     initializeLanguageSelector(); // Create and populate the language dropdown
+    initializeResetMenu(); // Create reset menu items
 
     chrome.storage.sync.get(['theme', 'language'], (settings) => {
       // Determine initial theme
@@ -93,6 +97,28 @@ document.addEventListener('DOMContentLoaded', () => {
       languageSelect.appendChild(option);
     }
     languageSelectorContainer.appendChild(languageSelect);
+  }
+
+  function initializeResetMenu() {
+    resetMenu.innerHTML = '';
+
+    // Domain Reset Item
+    domainResetItem = document.createElement('button');
+    domainResetItem.className = 'reset-menu-item';
+    domainResetItem.addEventListener('click', () => {
+        handleDomainReset();
+        resetMenu.classList.remove('show');
+    });
+    resetMenu.appendChild(domainResetItem);
+
+    // Account Reset Item
+    accountResetItem = document.createElement('button');
+    accountResetItem.className = 'reset-menu-item';
+    accountResetItem.addEventListener('click', () => {
+        handleAccountReset();
+        resetMenu.classList.remove('show');
+    });
+    resetMenu.appendChild(accountResetItem);
   }
 
   function initializePopupContent() {
@@ -215,8 +241,17 @@ document.addEventListener('DOMContentLoaded', () => {
     accountNumberInput.addEventListener('input', () => handleAccountChange(accountNumberInput.value));
 
     // Reset Listeners
-    domainResetBtn.addEventListener('click', handleDomainReset);
-    accountResetBtn.addEventListener('click', handleAccountReset);
+    globalResetBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetMenu.classList.toggle('show');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.reset-menu-container')) {
+            resetMenu.classList.remove('show');
+        }
+    });
 
     // Select text on click for number inputs
     tempNumberInput.addEventListener('click', (e) => e.target.select());
@@ -395,8 +430,9 @@ document.addEventListener('DOMContentLoaded', () => {
     accountSlider.disabled = !enabled;
     accountNumberInput.disabled = !enabled;
     
-    domainResetBtn.disabled = !enabled;
-    accountResetBtn.disabled = !enabled;
+    globalResetBtn.disabled = !enabled;
+    if (domainResetItem) domainResetItem.disabled = !enabled;
+    if (accountResetItem) accountResetItem.disabled = !enabled;
   }
 
   function applyTheme(theme) {
@@ -420,8 +456,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     domainActiveIndicator.textContent = strings[lang].active;
     accountActiveIndicator.textContent = strings[lang].active;
-    domainResetBtn.title = strings[lang].reset;
-    accountResetBtn.title = strings[lang].reset;
+    
+    globalResetBtn.title = strings[lang].reset;
+    if (domainResetItem) domainResetItem.textContent = strings[lang].resetDomain;
+    if (accountResetItem) accountResetItem.textContent = strings[lang].resetAccount;
   }
 
   // --- Run ---
