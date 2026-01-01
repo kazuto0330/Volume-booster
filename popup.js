@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const resetMenu = document.getElementById('reset-menu');
   let domainResetItem; // Will be created dynamically
   let accountResetItem; // Will be created dynamically
+  let tempResetItem; // Will be created dynamically
+  let noSettingsItem; // Will be created dynamically
   
   const domainActiveIndicator = document.getElementById('domain-active');
   const accountActiveIndicator = document.getElementById('account-active');
@@ -121,11 +123,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Account Reset Item
     accountResetItem = document.createElement('button');
     accountResetItem.className = 'reset-menu-item';
+    accountResetItem.style.display = 'none'; // Hidden by default
     accountResetItem.addEventListener('click', () => {
         handleAccountReset();
         resetMenu.classList.remove('show');
     });
     resetMenu.appendChild(accountResetItem);
+
+    // Temp Reset Item
+    tempResetItem = document.createElement('button');
+    tempResetItem.className = 'reset-menu-item';
+    tempResetItem.addEventListener('click', () => {
+        handleTempReset();
+        resetMenu.classList.remove('show');
+    });
+    resetMenu.appendChild(tempResetItem);
+
+    // No Settings Item
+    noSettingsItem = document.createElement('div');
+    noSettingsItem.className = 'reset-menu-item';
+    noSettingsItem.style.cursor = 'default';
+    noSettingsItem.style.color = 'var(--secondary-text-color)';
+    // Prevent hover effect or click
+    noSettingsItem.style.pointerEvents = 'none'; 
+    resetMenu.appendChild(noSettingsItem);
   }
 
   function initializePopupContent() {
@@ -191,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
               domainActiveIndicator.style.display = 'none';
               accountActiveIndicator.style.display = 'none';
               tempActiveIndicator.style.display = 'none'; // Ensure temp is hidden if error
+              updateActiveIndicators();
             } else {
               // content.jsから取得した現在の値を使用
               updateControls(tempSlider, tempNumberInput, response.boost);
@@ -406,11 +428,65 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
+  function handleTempReset() {
+      let targetBoost = 100;
+      if (hasAccountSetting) {
+          targetBoost = parseInt(accountSlider.value, 10);
+      } else if (hasDomainSetting) {
+          targetBoost = parseInt(domainSlider.value, 10);
+      }
+      
+      updateControls(tempSlider, tempNumberInput, targetBoost);
+      applyBoostToTab(targetBoost);
+      isTempActive = false;
+      updateActiveIndicators();
+  }
+
   function updateActiveIndicators() {
       domainActiveIndicator.style.display = 'none';
       accountActiveIndicator.style.display = 'none';
       tempActiveIndicator.style.display = 'none';
       
+      const showDomainReset = hasDomainSetting;
+      const showAccountReset = (currentAccountName && hasAccountSetting);
+      const showTempReset = isTempActive;
+
+      // Control visibility of reset menu items
+      if (domainResetItem) domainResetItem.style.display = showDomainReset ? 'block' : 'none';
+      if (accountResetItem) accountResetItem.style.display = showAccountReset ? 'block' : 'none';
+      if (tempResetItem) tempResetItem.style.display = showTempReset ? 'block' : 'none';
+      
+      if (noSettingsItem) {
+          noSettingsItem.style.display = (!showDomainReset && !showAccountReset && !showTempReset) ? 'block' : 'none';
+      }
+
+      // If everything is default (100% and no special settings), don't show ACTIVE tags
+      // Check if effective volume is 100 AND no overrides are active
+      
+      // Determine effective boost
+      let currentEffectiveBoost = 100;
+      if (isTempActive) {
+          currentEffectiveBoost = parseInt(tempSlider.value, 10);
+      } else if (hasAccountSetting) {
+          currentEffectiveBoost = parseInt(accountSlider.value, 10);
+      } else if (hasDomainSetting) {
+          currentEffectiveBoost = parseInt(domainSlider.value, 10);
+      }
+      
+      // "All default" condition:
+      // 1. No temp activity (or temp is 100, but logic usually sets isTempActive=false if it matches saved)
+      // 2. No account setting
+      // 3. No domain setting
+      // 4. Boost is 100
+      
+      // However, user simply said "If all default".
+      // If we have a domain setting of 100, is it "default"? Technically it's a setting.
+      // But let's assume "all default" means "no saved settings and current boost is 100".
+      
+      const isAllDefault = !hasDomainSetting && !hasAccountSetting && !isTempActive && currentEffectiveBoost === 100;
+
+      if (isAllDefault) return; 
+
       if (isTempActive) {
           tempActiveIndicator.style.display = 'inline-block';
           return;
@@ -421,7 +497,15 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (hasDomainSetting) {
           domainActiveIndicator.style.display = 'inline-block';
       } else {
-          tempActiveIndicator.style.display = 'inline-block';
+          // Only show temp active if it's not 100 or if we want to explicitly show it's controlling
+          // But if we are here, it means no account/domain setting.
+          // If boost is 100, we probably returned above at `isAllDefault`.
+          // If boost != 100, it should be caught by `isTempActive` ideally.
+          // But `isTempActive` might be false if the user just opened the popup and volume is 100.
+          
+          if (currentEffectiveBoost !== 100) {
+              tempActiveIndicator.style.display = 'inline-block';
+          }
       }
   }
 
@@ -497,6 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
     globalResetBtn.disabled = !enabled;
     if (domainResetItem) domainResetItem.disabled = !enabled;
     if (accountResetItem) accountResetItem.disabled = !enabled;
+    if (tempResetItem) tempResetItem.disabled = !enabled;
   }
 
   function applyTheme(theme) {
@@ -525,6 +610,8 @@ document.addEventListener('DOMContentLoaded', () => {
     globalResetBtn.title = strings[lang].reset;
     if (domainResetItem) domainResetItem.textContent = strings[lang].resetDomain;
     if (accountResetItem) accountResetItem.textContent = strings[lang].resetAccount;
+    if (tempResetItem) tempResetItem.textContent = strings[lang].resetTemp;
+    if (noSettingsItem) noSettingsItem.textContent = strings[lang].noSettingsToReset;
   }
 
   // --- Run ---

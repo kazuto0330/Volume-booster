@@ -11,6 +11,8 @@ const strings = {
     reset: "設定を削除",
     resetDomain: "サイト全体の設定を削除",
     resetAccount: "アカウントの設定を削除",
+    resetTemp: "現在のタブの設定をリセット",
+    noSettingsToReset: "すべてデフォルト設定です",
     statusUnsupported: "このページでは使用できません。",
     // Options
     optionsTitle: "音量ブースター設定",
@@ -47,6 +49,8 @@ const strings = {
     reset: "Remove Setting",
     resetDomain: "Remove Site-wide Setting",
     resetAccount: "Remove Account Setting",
+    resetTemp: "Reset Current Tab Setting",
+    noSettingsToReset: "All settings are default",
     statusUnsupported: "Not available on this page.",
     // Options
     optionsTitle: "Volume Booster Settings",
