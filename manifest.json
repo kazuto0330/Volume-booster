@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Volume Booster",
-  "version": "1.0.10.4",
+  "version": "1.0.10.5",
   "description": "特定のWebサイトの音量を10%から600%までブーストします。サイトごとに設定を保存したり、現在のタブだけ一時的に変更したりできます。",
   "icons": {
     "16": "icon.png",

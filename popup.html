@@ -296,7 +296,12 @@
   </div>
 
   <div id="control-group-temp" class="control-group">
-    <div id="temp-title" class="control-group-title">Current Tab (temporary)</div>
+    <div class="control-header">
+        <div style="display:flex; align-items:center;">
+            <div id="temp-title" class="control-group-title">Current Tab (temporary)</div>
+            <span id="temp-active" class="active-indicator">ACTIVE</span>
+        </div>
+    </div>
     <div class="controls-container">
       <input type="range" id="temp-boost-slider" min="0" max="600" value="100">
       <div class="number-input-wrapper">

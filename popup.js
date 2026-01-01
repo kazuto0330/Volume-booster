@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const domainActiveIndicator = document.getElementById('domain-active');
   const accountActiveIndicator = document.getElementById('account-active');
+  const tempActiveIndicator = document.getElementById('temp-active');
 
   const optionsBtn = document.getElementById('options-btn');
 
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Active Status Flags
   let hasAccountSetting = false;
   let hasDomainSetting = false;
+  let isTempActive = false;
 
   // Available languages with display names
   const availableLanguages = {
@@ -127,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function initializePopupContent() {
+    isTempActive = false; // Reset temp active state on init
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       currentTab = tabs[0];
       if (currentTab.url && currentTab.url.startsWith('http')) {
@@ -187,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
               accountGroup.style.display = 'none';
               domainActiveIndicator.style.display = 'none';
               accountActiveIndicator.style.display = 'none';
+              tempActiveIndicator.style.display = 'none'; // Ensure temp is hidden if error
             } else {
               // content.jsから取得した現在の値を使用
               updateControls(tempSlider, tempNumberInput, response.boost);
@@ -203,16 +207,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (accSettings[accKey] !== undefined) {
                         hasAccountSetting = true;
                         updateControls(accountSlider, accountNumberInput, accSettings[accKey]);
+                        
+                        // Check if current boost differs from account setting
+                        if (response.boost !== accSettings[accKey]) {
+                            isTempActive = true;
+                        }
                     } else {
                         hasAccountSetting = false;
                         // Use domain setting as default if no account setting
                         updateControls(accountSlider, accountNumberInput, domainBoost);
+                        
+                        // Check if current boost differs from domain setting (if it exists)
+                        if (hasDomainSetting && response.boost !== domainBoost) {
+                            isTempActive = true;
+                        }
                     }
                     updateActiveIndicators();
                 });
               } else {
                 accountGroup.style.display = 'none';
                 accountActiveIndicator.style.display = 'none';
+                
+                // Check if current boost differs from domain setting
+                if (hasDomainSetting && response.boost !== domainBoost) {
+                    isTempActive = true;
+                }
+                
                 updateActiveIndicators();
               }
             }
@@ -302,6 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const boost = sanitizeBoostValue(value);
     updateControls(tempSlider, tempNumberInput, boost);
     applyBoostToTab(boost);
+    isTempActive = true;
+    updateActiveIndicators();
   }
 
   function handleDomainChange(value) {
@@ -317,6 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     applyBoostToTab(boost);
     hasDomainSetting = true; // Mark as having a setting (being edited/saved)
+    isTempActive = false;
     updateActiveIndicators();
     saveDomainBoost(boost);
   }
@@ -327,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateControls(tempSlider, tempNumberInput, boost);
     applyBoostToTab(boost);
     hasAccountSetting = true; // Mark as having a setting
+    isTempActive = false;
     updateActiveIndicators();
     saveAccountBoost(boost);
   }
@@ -385,11 +409,19 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateActiveIndicators() {
       domainActiveIndicator.style.display = 'none';
       accountActiveIndicator.style.display = 'none';
+      tempActiveIndicator.style.display = 'none';
       
+      if (isTempActive) {
+          tempActiveIndicator.style.display = 'inline-block';
+          return;
+      }
+
       if (hasAccountSetting) {
           accountActiveIndicator.style.display = 'inline-block';
       } else if (hasDomainSetting) {
           domainActiveIndicator.style.display = 'inline-block';
+      } else {
+          tempActiveIndicator.style.display = 'inline-block';
       }
   }
 
@@ -488,6 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     domainActiveIndicator.textContent = strings[lang].active;
     accountActiveIndicator.textContent = strings[lang].active;
+    tempActiveIndicator.textContent = strings[lang].active;
     
     globalResetBtn.title = strings[lang].reset;
     if (domainResetItem) domainResetItem.textContent = strings[lang].resetDomain;
