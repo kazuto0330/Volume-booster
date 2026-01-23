@@ -74,6 +74,15 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
               processMediaElement(node);
             }
             node.querySelectorAll('video, audio').forEach(processMediaElement);
+
+            // New: Check for YouTube player
+            if (window.location.hostname.includes('youtube.com')) {
+                if (node.id === 'player') {
+                    setupYouTubeVolumeScroll();
+                } else if (node.querySelector && node.querySelector('#player')) {
+                    setupYouTubeVolumeScroll();
+                }
+            }
           }
         });
       });
@@ -184,9 +193,69 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         if (liveObserver) liveObserver.disconnect();
         // Observer logic removed/simplified as we rely on URL_CHANGED
     }
+
+    // YouTube Player Scroll Volume Control
+    function setupYouTubeVolumeScroll() {
+        console.log("Volume Booster: setupYouTubeVolumeScroll called.");
+        if (!window.location.hostname.includes('youtube.com')) {
+            console.log("Volume Booster: Not on YouTube, skipping scroll setup.");
+            return;
+        }
+        
+        // Prefer 'movie_player' as it is the main interactive container, fallback to 'player'
+        const player = document.getElementById('movie_player') || document.getElementById('player');
+        if (!player) {
+            console.log("Volume Booster: Player element ('movie_player' or 'player') not found.");
+            return;
+        }
+
+        if (player.dataset.volumeScrollAttached === 'true') {
+             console.log(`Volume Booster: Scroll listener already attached to ${player.id}.`);
+             return;
+        }
+
+        player.addEventListener('wheel', (event) => {
+             // We need to act even if propagation was stopped by others (capture phase handles this),
+             // but we also need to be careful not to block scrolling if not intended.
+             
+             // Check if we are in "Theatre mode" or Fullscreen where the player takes up most space, 
+             // or simply if the mouse is over the video area.
+             // Since we attached to the player element, we are implicitly over it.
+
+             const video = document.querySelector('video.html5-main-video') || player.querySelector('video');
+             if (!video) {
+                 console.log("Volume Booster: Video element not found inside player during scroll.");
+                 return;
+             }
+             
+             console.log("Volume Booster: Scroll event captured on player.");
+
+             event.preventDefault();
+             event.stopPropagation(); // Stop page scrolling
+
+             // Sensitivity
+             const step = 0.05;
+             const direction = event.deltaY > 0 ? -1 : 1; // Down positive -> decrease, Up negative -> increase
+             
+             let newVol = video.volume + (step * direction);
+             // Clamp
+             if (newVol > 1) newVol = 1;
+             if (newVol < 0) newVol = 0;
+             
+             video.volume = newVol;
+             
+             // Optional: Show volume visualization or log
+             console.log(`Volume Booster: New volume set to ${newVol.toFixed(2)}`);
+
+        }, { passive: false, capture: true }); // Capture phase!
+
+        player.dataset.volumeScrollAttached = 'true';
+        console.log(`Volume Booster: YouTube scroll volume control attached to ${player.id}.`);
+    }
   
     // ページ読み込み時に保存された設定を適用
     async function initializeFromStorage() {
+      setupYouTubeVolumeScroll();
       const currentUrl = getNormalizedUrl();
       try {
         const data = await chrome.storage.sync.get({ 
