@@ -19,7 +19,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       gainNode = audioContext.createGain();
       gainNode.connect(audioContext.destination);
-      console.log("Volume Booster: Audio context initialized.");
       processAllMediaElements(); // 既存のメディア要素を接続
       observeDOMChanges(); // DOM監視を開始
     } catch (e) {
@@ -52,7 +51,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       const source = audioContext.createMediaElementSource(element);
       source.connect(gainNode);
       mediaElements.set(element, source);
-      console.log('Volume Booster: Attached to media element.', element);
     } catch (error) {
       console.error('Volume Booster: Error processing media element.', error);
     }
@@ -217,7 +215,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     }
 
     // YouTube Player Scroll Volume Control
-    let scrollSettings = { enabled: true, step: 5 }; // Default
+    let scrollSettings = { enabled: false, step: 5 }; // Default
 
     function setupYouTubeVolumeScroll() {
         if (!window.location.hostname.includes('youtube.com')) return;
@@ -263,7 +261,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         }, { passive: false, capture: true }); // Capture phase!
 
         player.dataset.volumeScrollAttached = 'true';
-        console.log(`Volume Booster: YouTube scroll volume control attached.`);
     }
   
     // ページ読み込み時に保存された設定を適用
@@ -274,14 +271,14 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             boostSettings: {}, 
             accountSettings: {},
             ytLiveSettings: { enabled: false, targetVolume: 100 },
-            ytScrollSettings: { enabled: true, step: 5 }
+            ytScrollSettings: { enabled: false, step: 5 }
         });
         const settings = data.boostSettings || {};
         const accountSettings = data.accountSettings || {};
         const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 100 };
         
         // Update global scroll settings
-        scrollSettings = data.ytScrollSettings || { enabled: true, step: 5 };
+        scrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
         
         setupYouTubeVolumeScroll();
         
@@ -302,10 +299,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
                     
                     if (status.videoId === targetVideoId) {
                         isLive = status.isLive;
-                        console.log(`Volume Booster: Video ID match (${status.videoId}). Live status: ${isLive}`);
                         break;
-                    } else {
-                        console.log(`Volume Booster: Video ID mismatch (Target: ${targetVideoId}, Player: ${status.videoId}). Retrying...`);
                     }
                     
                     await new Promise(r => setTimeout(r, 500));
@@ -318,7 +312,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         currentAccountName = await getAccountInfo();
 
         if (isLive) {
-            console.log(`Volume Booster: YouTube Live detected. Applying target volume: ${ytSettings.targetVolume}%`);
             sessionStorage.setItem('volumeBoosterIsLiveAutoBoost', 'true');
             activeSource = 'live';
             applyBoost(ytSettings.targetVolume);
@@ -327,7 +320,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
         // YouTube Liveから遷移した場合、キャッシュされたブーストをリセット
         if (sessionStorage.getItem('volumeBoosterIsLiveAutoBoost') === 'true') {
-             console.log("Volume Booster: Resetting boost from YouTube Live.");
              sessionStorage.removeItem('volumeBoosterCache');
              sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost');
         }
@@ -367,15 +359,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             sessionStorage.setItem('volumeBoosterMatchKey', matchKey);
 
             if (previousMatchKey === matchKey && cachedBoost) {
-                console.log(`Volume Booster: Keeping temporary setting ${cachedBoost}% (same key ${matchKey}).`);
                 applyBoost(parseInt(cachedBoost, 10));
-                // If the cached value is different from the saved value, it's effectively a temp override
-                // But for source tracking, we can consider it 'temp' or keep the original source
-                // Let's keep the source as 'account' or 'domain' but maybe we should denote it's modified?
-                // For now, simple source tracking.
                 activeSource = source; 
             } else {
-                console.log(`Volume Booster: Found saved setting for ${matchKey}: ${targetBoost}%`);
                 applyBoost(targetBoost);
                 activeSource = source;
             }
@@ -388,7 +374,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             // In this case, we should NOT restore the cache (which belongs to the managed context),
             // but instead reset to default.
             if (previousMatchKey) {
-                console.log("Volume Booster: Transitioned from managed to unmanaged context. Resetting to default.");
                 sessionStorage.removeItem('volumeBoosterCache');
                 sessionStorage.removeItem('volumeBoosterMatchKey');
                 applyBoost(100);
@@ -400,7 +385,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
                 
                 const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
                 if (cachedBoost) {
-                    console.log(`Volume Booster: Restoring cached setting: ${cachedBoost}%`);
                     applyBoost(parseInt(cachedBoost, 10));
                     activeSource = 'temp'; 
                 } else {

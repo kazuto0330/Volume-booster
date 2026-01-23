@@ -2,26 +2,9 @@
 
 // Listen for messages from other parts of the extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  // This listener is currently empty but is required to prevent errors
-  // when other parts of the extension (like popup.js) send messages.
-  // It's good practice to return true for asynchronous message handling.
+  // This listener is required to handle messages from popup.js or options.js
   if (request.type === 'SETTINGS_UPDATED') {
-    // In the future, you could add logic here to react to settings changes.
-    console.log('Settings updated message received in background.');
-  }
-  return true;
-});
-
-// background.js
-
-// Listen for messages from other parts of the extension
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  // This listener is currently empty but is required to prevent errors
-  // when other parts of the extension (like popup.js) send messages.
-  // It's good practice to return true for asynchronous message handling.
-  if (request.type === 'SETTINGS_UPDATED') {
-    // In the future, you could add logic here to react to settings changes.
-    console.log('Settings updated message received in background.');
+    // Settings were updated, potentially react here if needed.
   }
   return true;
 });
@@ -40,8 +23,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (chrome.runtime.lastError) {
         // Content script not present, proceed to check settings and inject if needed
         checkAndInject(tabId, normalizedUrl);
-      } else {
-        console.log(`Sent URL_CHANGED to tab ${tabId}`);
       }
     });
   }
@@ -78,8 +59,6 @@ function checkAndInject(tabId, normalizedUrl) {
         }, () => {
           if (chrome.runtime.lastError) {
               console.error(`Script injection failed: ${chrome.runtime.lastError.message}`);
-          } else {
-              console.log(`Injected content.js into ${normalizedUrl} due to matching setting.`);
           }
         });
       }

@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentLang = 'ja';
   let currentTheme = 'dark';
   let ytLiveSettings = { enabled: false, targetVolume: 100 };
-  let ytScrollSettings = { enabled: true, step: 5 }; // Default values
+  let ytScrollSettings = { enabled: false, step: 5 }; // Default values
   let ytSaveTimer;
   let ytScrollSaveTimer;
 
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentTheme = settings.theme || 'dark';
       currentLang = settings.language || 'ja';
       ytLiveSettings = settings.ytLiveSettings || { enabled: false, targetVolume: 100 };
-      ytScrollSettings = settings.ytScrollSettings || { enabled: true, step: 5 };
+      ytScrollSettings = settings.ytScrollSettings || { enabled: false, step: 5 };
       
       applyTheme(currentTheme);
       applyLanguage(currentLang);
@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ytToggle) ytToggle.checked = ytLiveSettings.enabled;
       if (ytSlider) ytSlider.value = ytLiveSettings.targetVolume;
       if (ytValueDisplay) ytValueDisplay.textContent = `${ytLiveSettings.targetVolume}%`;
+      
+      updatePanelState(ytToggle, 'yt-live-slider');
 
       // Update YT Scroll UI
       const ytScrollToggle = document.getElementById('yt-scroll-toggle');
@@ -66,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ytScrollToggle) ytScrollToggle.checked = ytScrollSettings.enabled;
       if (ytScrollStepSlider) ytScrollStepSlider.value = ytScrollSettings.step;
       if (ytScrollStepDisplay) ytScrollStepDisplay.textContent = `${ytScrollSettings.step}%`;
+
+      updatePanelState(ytScrollToggle, 'yt-scroll-step-slider');
     });
 
     addEventListeners();
@@ -128,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ytToggle) {
         ytToggle.addEventListener('change', () => {
             saveYtLiveSettings();
+            updatePanelState(ytToggle, 'yt-live-slider');
         });
     }
 
@@ -149,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ytScrollToggle) {
         ytScrollToggle.addEventListener('change', () => {
             saveYtScrollSettings();
+            updatePanelState(ytScrollToggle, 'yt-scroll-step-slider');
         });
     }
 
@@ -160,6 +166,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Handlers ---
+  function updatePanelState(toggle, sliderId) {
+      if (!toggle) return;
+      const panel = toggle.closest('.panel-card');
+      const slider = document.getElementById(sliderId);
+      
+      if (!toggle.checked) {
+          panel.classList.add('dimmed');
+          if (slider) slider.disabled = true;
+      } else {
+          panel.classList.remove('dimmed');
+          if (slider) slider.disabled = false;
+      }
+  }
+
   function cleanDomain(value) {
     return value.trim()
       .replace(/^https?:\/\//, '')

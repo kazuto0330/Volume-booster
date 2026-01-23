@@ -465,6 +465,16 @@
         accent-color: var(--accent-color);
     }
 
+    /* Dimmed state for disabled panels */
+    .panel-card.dimmed {
+        opacity: 0.6;
+        filter: grayscale(0.2);
+        pointer-events: auto; /* Allow interaction with the toggle itself */
+    }
+    .panel-card.dimmed .range-container {
+        pointer-events: none; /* Disable range slider interaction */
+    }
+
   </style>
 </head>
 <body>
