@@ -35,7 +35,11 @@ const strings = {
     generalSettings: "一般設定",
     youtubeLiveSettings: "YouTube Live設定",
     enableYoutubeLiveLowering: "YouTubeライブでは音量を下げる",
-    targetVolume: "目標音量"
+    targetVolume: "目標音量",
+    // Scroll Settings
+    youtubeScrollSettings: "YouTubeマウスホイール音量",
+    enableYoutubeScroll: "ホイールでの音量調整を有効にする",
+    scrollStep: "ホイール1目盛りの変化量 (%)"
   },
   en: {
     // General
@@ -73,6 +77,10 @@ const strings = {
     generalSettings: "General Settings",
     youtubeLiveSettings: "YouTube Live Settings",
     enableYoutubeLiveLowering: "Lower volume on YouTube Live",
-    targetVolume: "Target Volume"
+    targetVolume: "Target Volume",
+    // Scroll Settings
+    youtubeScrollSettings: "YouTube Mouse Wheel Volume",
+    enableYoutubeScroll: "Adjust volume via mouse wheel on YouTube",
+    scrollStep: "Volume change per step (%)"
   }
 };

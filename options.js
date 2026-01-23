@@ -32,14 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentLang = 'ja';
   let currentTheme = 'dark';
   let ytLiveSettings = { enabled: false, targetVolume: 100 };
+  let ytScrollSettings = { enabled: false, step: 5 }; // Default values
   let ytSaveTimer;
+  let ytScrollSaveTimer;
 
   // --- Initialization ---
   function initialize() {
-    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'accountSettings', 'ytLiveSettings'], (settings) => {
+    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'accountSettings', 'ytLiveSettings', 'ytScrollSettings'], (settings) => {
       currentTheme = settings.theme || 'dark';
       currentLang = settings.language || 'ja';
       ytLiveSettings = settings.ytLiveSettings || { enabled: false, targetVolume: 100 };
+      ytScrollSettings = settings.ytScrollSettings || { enabled: false, step: 5 };
       
       applyTheme(currentTheme);
       applyLanguage(currentLang);
@@ -54,6 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ytToggle) ytToggle.checked = ytLiveSettings.enabled;
       if (ytSlider) ytSlider.value = ytLiveSettings.targetVolume;
       if (ytValueDisplay) ytValueDisplay.textContent = `${ytLiveSettings.targetVolume}%`;
+      
+      updatePanelState(ytToggle, 'yt-live-slider');
+
+      // Update YT Scroll UI
+      const ytScrollToggle = document.getElementById('yt-scroll-toggle');
+      const ytScrollStepSlider = document.getElementById('yt-scroll-step-slider');
+      const ytScrollStepDisplay = document.getElementById('yt-scroll-step-display');
+
+      if (ytScrollToggle) ytScrollToggle.checked = ytScrollSettings.enabled;
+      if (ytScrollStepSlider) ytScrollStepSlider.value = ytScrollSettings.step;
+      if (ytScrollStepDisplay) ytScrollStepDisplay.textContent = `${ytScrollSettings.step}%`;
+
+      updatePanelState(ytScrollToggle, 'yt-scroll-step-slider');
     });
 
     addEventListeners();
@@ -116,6 +132,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ytToggle) {
         ytToggle.addEventListener('change', () => {
             saveYtLiveSettings();
+            updatePanelState(ytToggle, 'yt-live-slider');
+        });
+    }
+
+    // Scroll Settings Logic
+    const ytScrollToggle = document.getElementById('yt-scroll-toggle');
+    const ytScrollStepSlider = document.getElementById('yt-scroll-step-slider');
+    const ytScrollStepDisplay = document.getElementById('yt-scroll-step-display');
+
+    if (ytScrollStepSlider && ytScrollStepDisplay) {
+        ytScrollStepSlider.addEventListener('input', () => {
+            ytScrollStepDisplay.textContent = `${ytScrollStepSlider.value}%`;
+        });
+        ytScrollStepSlider.addEventListener('change', () => {
+            saveYtScrollSettings();
+        });
+        ytScrollStepSlider.addEventListener('wheel', handleScrollSliderWheel);
+    }
+
+    if (ytScrollToggle) {
+        ytScrollToggle.addEventListener('change', () => {
+            saveYtScrollSettings();
+            updatePanelState(ytScrollToggle, 'yt-scroll-step-slider');
         });
     }
 
@@ -127,6 +166,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Handlers ---
+  function updatePanelState(toggle, sliderId) {
+      if (!toggle) return;
+      const panel = toggle.closest('.panel-card');
+      const slider = document.getElementById(sliderId);
+      
+      if (!toggle.checked) {
+          panel.classList.add('dimmed');
+          if (slider) slider.disabled = true;
+      } else {
+          panel.classList.remove('dimmed');
+          if (slider) slider.disabled = false;
+      }
+  }
+
   function cleanDomain(value) {
     return value.trim()
       .replace(/^https?:\/\//, '')
@@ -164,6 +217,35 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(ytSaveTimer);
         ytSaveTimer = setTimeout(() => {
             saveYtLiveSettings();
+        }, 500);
+    }
+  }
+
+  function handleScrollSliderWheel(event) {
+    const slider = event.target;
+    event.preventDefault();
+    const currentValue = parseInt(slider.value, 10);
+    const step = event.deltaY < 0 ? 1 : -1; // Scroll up +1, down -1
+
+    let newValue = currentValue + step;
+    
+    // Clamp value (min 1, max 20 based on HTML input)
+    if (newValue < 1) newValue = 1;
+    if (newValue > 20) newValue = 20;
+    
+    if (newValue !== currentValue) {
+        slider.value = newValue;
+        
+        // Update display
+        const ytScrollStepDisplay = document.getElementById('yt-scroll-step-display');
+        if (ytScrollStepDisplay) {
+            ytScrollStepDisplay.textContent = `${newValue}%`;
+        }
+
+        // Debounced save
+        clearTimeout(ytScrollSaveTimer);
+        ytScrollSaveTimer = setTimeout(() => {
+            saveYtScrollSettings();
         }, 500);
     }
   }
@@ -406,6 +488,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function saveYtScrollSettings() {
+    const ytScrollToggle = document.getElementById('yt-scroll-toggle');
+    const ytScrollStepSlider = document.getElementById('yt-scroll-step-slider');
+
+    const settings = {
+        enabled: ytScrollToggle.checked,
+        step: parseInt(ytScrollStepSlider.value, 10)
+    };
+
+    chrome.storage.sync.set({ ytScrollSettings: settings }, () => {
+         chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+         chrome.tabs.query({url: "*://*.youtube.com/*"}, (tabs) => {
+             tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'SETTINGS_UPDATED' }));
+         });
+    });
+  }
+
   // --- UI Updates ---
   function applyTheme(theme) {
     document.body.classList.toggle('theme-dark', theme === 'dark');
@@ -448,6 +547,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const labelTargetVolume = document.getElementById('labelTargetVolume');
     if (labelTargetVolume) labelTargetVolume.textContent = s.targetVolume;
+
+    // Scroll Settings Localization
+    const youtubeScrollSettingsHeader = document.getElementById('youtubeScrollSettingsHeader');
+    if (youtubeScrollSettingsHeader) youtubeScrollSettingsHeader.textContent = s.youtubeScrollSettings;
+    
+    const labelEnableYoutubeScroll = document.getElementById('labelEnableYoutubeScroll');
+    if (labelEnableYoutubeScroll) labelEnableYoutubeScroll.textContent = s.enableYoutubeScroll;
+    
+    const labelScrollStep = document.getElementById('labelScrollStep');
+    if (labelScrollStep) labelScrollStep.textContent = s.scrollStep;
 
     // Account Settings Localization
     if (accountSettingsHeader) accountSettingsHeader.textContent = s.accountSettings;

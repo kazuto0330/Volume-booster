@@ -395,7 +395,6 @@
     /* Toggle Switch */
     .toggle-container {
         display: flex;
-        align-items: center;
         justify-content: space-between;
         margin-bottom: 16px;
     }
@@ -404,6 +403,7 @@
         display: inline-block;
         width: 48px;
         height: 24px;
+        flex-shrink: 0;
     }
     .toggle-switch input {
         opacity: 0;
@@ -463,6 +463,16 @@
         margin: 8px 0;
         cursor: pointer;
         accent-color: var(--accent-color);
+    }
+
+    /* Dimmed state for disabled panels */
+    .panel-card.dimmed {
+        opacity: 0.6;
+        filter: grayscale(0.2);
+        pointer-events: auto; /* Allow interaction with the toggle itself */
+    }
+    .panel-card.dimmed .range-container {
+        pointer-events: none; /* Disable range slider interaction */
     }
 
   </style>
@@ -572,6 +582,25 @@
                         <span id="yt-live-value-display">100%</span>
                     </div>
                     <input type="range" id="yt-live-slider" min="0" max="600" value="100">
+                </div>
+            </div>
+
+            <!-- YouTube Scroll Settings -->
+            <div class="panel-card">
+                <h2 id="youtubeScrollSettingsHeader">YouTube Scroll Settings</h2>
+                <div class="toggle-container">
+                    <span id="labelEnableYoutubeScroll" class="toggle-label">Enable Feature</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="yt-scroll-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="range-container">
+                    <div class="range-label">
+                        <span id="labelScrollStep">Step Size</span>
+                        <span id="yt-scroll-step-display">5%</span>
+                    </div>
+                    <input type="range" id="yt-scroll-step-slider" min="1" max="20" value="5">
                 </div>
             </div>
 
