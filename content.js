@@ -217,9 +217,20 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     }
 
     // YouTube Player Scroll Volume Control
+    let scrollSettings = { enabled: true, step: 5 }; // Default
+
     function setupYouTubeVolumeScroll() {
         if (!window.location.hostname.includes('youtube.com')) return;
         
+        // Check if enabled
+        if (!scrollSettings.enabled) {
+             // If disabled, we should remove the listener if it was attached.
+             // However, removing anonymous listeners is hard. 
+             // We can just rely on the flag inside the listener or reload the page for disable to take effect cleanly,
+             // or simply check the global 'scrollSettings' inside the event handler.
+             return;
+        }
+
         // Prefer 'movie_player' as it is the main interactive container, fallback to 'player'
         const player = document.getElementById('movie_player') || document.getElementById('player');
         if (!player) return;
@@ -227,17 +238,20 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         if (player.dataset.volumeScrollAttached === 'true') return;
 
         player.addEventListener('wheel', (event) => {
+             // Check enabled status dynamically
+             if (!scrollSettings.enabled) return;
+
              const video = document.querySelector('video.html5-main-video') || player.querySelector('video');
              if (!video) return;
              
              event.preventDefault();
              event.stopPropagation(); // Stop page scrolling
 
-             // Sensitivity
-             const step = 0.05;
-             const direction = event.deltaY > 0 ? -1 : 1; // Down positive -> decrease, Up negative -> increase
+             // Sensitivity (convert percent step to 0-1 range)
+             const stepVal = (scrollSettings.step || 5) / 100;
+             const direction = event.deltaY > 0 ? -1 : 1; 
              
-             let newVol = video.volume + (step * direction);
+             let newVol = video.volume + (stepVal * direction);
              // Clamp
              if (newVol > 1) newVol = 1;
              if (newVol < 0) newVol = 0;
@@ -254,17 +268,22 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   
     // ページ読み込み時に保存された設定を適用
     async function initializeFromStorage() {
-      setupYouTubeVolumeScroll();
       const currentUrl = getNormalizedUrl();
       try {
         const data = await chrome.storage.sync.get({ 
             boostSettings: {}, 
             accountSettings: {},
-            ytLiveSettings: { enabled: false, targetVolume: 100 } 
+            ytLiveSettings: { enabled: false, targetVolume: 100 },
+            ytScrollSettings: { enabled: true, step: 5 }
         });
         const settings = data.boostSettings || {};
         const accountSettings = data.accountSettings || {};
         const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 100 };
+        
+        // Update global scroll settings
+        scrollSettings = data.ytScrollSettings || { enabled: true, step: 5 };
+        
+        setupYouTubeVolumeScroll();
         
         let targetBoost = null;
         let source = 'default';
