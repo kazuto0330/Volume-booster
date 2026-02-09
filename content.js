@@ -243,6 +243,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              // Check enabled status dynamically
              if (!scrollSettings.enabled) return;
 
+             // Ignore if scrolling over the control bar, top bar, or popups (like settings menu)
+             if (event.target.closest('.ytp-chrome-bottom, .ytp-chrome-top, .ytp-popup')) return;
+
              const video = document.querySelector('video.html5-main-video') || player.querySelector('video');
              if (!video) return;
              
