@@ -36,9 +36,13 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     }
 
     if (!gainNode) {
-      // gainNodeがない場合、AudioContextのセットアップがまだ
+      // ブーストが100%（デフォルト）の場合は、AudioContextをセットアップしない
+      // これにより、不要なオーディオグラフの接続とそれに伴うCORSエラーを回避する
+      if (boost === 100) return;
+      
       setupAudioContext();
     }
+    
     if (gainNode) {
       gainNode.gain.value = boost / 100;
     }
