@@ -36,9 +36,13 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     }
 
     if (!gainNode) {
-      // gainNodeがない場合、AudioContextのセットアップがまだ
+      // ブーストが100%（デフォルト）の場合は、AudioContextをセットアップしない
+      // これにより、不要なオーディオグラフの接続とそれに伴うCORSエラーを回避する
+      if (boost === 100) return;
+      
       setupAudioContext();
     }
+    
     if (gainNode) {
       gainNode.gain.value = boost / 100;
     }
@@ -238,6 +242,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         player.addEventListener('wheel', (event) => {
              // Check enabled status dynamically
              if (!scrollSettings.enabled) return;
+
+             // Ignore if scrolling over the control bar, top bar, or popups (like settings menu)
+             if (event.target.closest('.ytp-chrome-bottom, .ytp-chrome-top, .ytp-popup')) return;
 
              const video = document.querySelector('video.html5-main-video') || player.querySelector('video');
              if (!video) return;
