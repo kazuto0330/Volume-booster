@@ -332,9 +332,24 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              if (newVol > 1) newVol = 1;
              if (newVol < 0) newVol = 0;
 
-             // Directly set video volume for Twitch
+             // 1. Directly set video volume (Audio source of truth)
              video.volume = newVol;
              if (newVol > 0 && video.muted) video.muted = false;
+
+             // 2. Sync with Twitch UI Slider (React)
+             try {
+                 const volumeSlider = document.querySelector('input[data-a-target="player-volume-slider"]');
+                 if (volumeSlider) {
+                     // React hack: Call native setter to ensure React detects the change
+                     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                     nativeInputValueSetter.call(volumeSlider, newVol);
+                     
+                     volumeSlider.dispatchEvent(new Event('input', { bubbles: true }));
+                     volumeSlider.dispatchEvent(new Event('change', { bubbles: true }));
+                 }
+             } catch (e) {
+                 // Fallback or ignore if UI update fails
+             }
 
              // Show overlay
              showVolumeOverlay(newVol, playerContainer);
