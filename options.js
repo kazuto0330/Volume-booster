@@ -34,18 +34,21 @@ document.addEventListener('DOMContentLoaded', () => {
   let ytLiveSettings = { enabled: false, targetVolume: 100 };
   let ytAutoSettings = { enabled: false, volume: 30 }; // Default values for Auto Set
   let ytScrollSettings = { enabled: false, step: 5 }; // Default values
+  let twitchScrollSettings = { enabled: false, step: 5 }; // Twitch Default
   let ytSaveTimer;
   let ytAutoSaveTimer;
   let ytScrollSaveTimer;
+  let twitchScrollSaveTimer;
 
   // --- Initialization ---
   function initialize() {
-    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'accountSettings', 'ytLiveSettings', 'ytAutoSettings', 'ytScrollSettings'], (settings) => {
+    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'accountSettings', 'ytLiveSettings', 'ytAutoSettings', 'ytScrollSettings', 'twitchScrollSettings'], (settings) => {
       currentTheme = settings.theme || 'dark';
       currentLang = settings.language || 'ja';
       ytLiveSettings = settings.ytLiveSettings || { enabled: false, targetVolume: 100 };
       ytAutoSettings = settings.ytAutoSettings || { enabled: false, volume: 30 };
       ytScrollSettings = settings.ytScrollSettings || { enabled: false, step: 5 };
+      twitchScrollSettings = settings.twitchScrollSettings || { enabled: false, step: 5 };
       
       applyTheme(currentTheme);
       applyLanguage(currentLang);
@@ -84,6 +87,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ytScrollStepDisplay) ytScrollStepDisplay.textContent = `${ytScrollSettings.step}%`;
 
       updatePanelState(ytScrollToggle, 'yt-scroll-step-slider');
+
+      // Update Twitch Scroll UI
+      const twitchScrollToggle = document.getElementById('twitch-scroll-toggle');
+      const twitchScrollStepSlider = document.getElementById('twitch-scroll-step-slider');
+      const twitchScrollStepDisplay = document.getElementById('twitch-scroll-step-display');
+
+      if (twitchScrollToggle) twitchScrollToggle.checked = twitchScrollSettings.enabled;
+      if (twitchScrollStepSlider) twitchScrollStepSlider.value = twitchScrollSettings.step;
+      if (twitchScrollStepDisplay) twitchScrollStepDisplay.textContent = `${twitchScrollSettings.step}%`;
+
+      updatePanelState(twitchScrollToggle, 'twitch-scroll-step-slider');
     });
 
     addEventListeners();
@@ -191,6 +205,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ytScrollToggle.addEventListener('change', () => {
             saveYtScrollSettings();
             updatePanelState(ytScrollToggle, 'yt-scroll-step-slider');
+        });
+    }
+
+    // Twitch Scroll Settings Logic
+    const twitchScrollToggle = document.getElementById('twitch-scroll-toggle');
+    const twitchScrollStepSlider = document.getElementById('twitch-scroll-step-slider');
+    const twitchScrollStepDisplay = document.getElementById('twitch-scroll-step-display');
+
+    if (twitchScrollStepSlider && twitchScrollStepDisplay) {
+        twitchScrollStepSlider.addEventListener('input', () => {
+            twitchScrollStepDisplay.textContent = `${twitchScrollStepSlider.value}%`;
+        });
+        twitchScrollStepSlider.addEventListener('change', () => {
+            saveTwitchScrollSettings();
+        });
+        twitchScrollStepSlider.addEventListener('wheel', handleTwitchScrollSliderWheel);
+    }
+
+    if (twitchScrollToggle) {
+        twitchScrollToggle.addEventListener('change', () => {
+            saveTwitchScrollSettings();
+            updatePanelState(twitchScrollToggle, 'twitch-scroll-step-slider');
         });
     }
 
@@ -311,6 +347,35 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(ytScrollSaveTimer);
         ytScrollSaveTimer = setTimeout(() => {
             saveYtScrollSettings();
+        }, 500);
+    }
+  }
+
+  function handleTwitchScrollSliderWheel(event) {
+    const slider = event.target;
+    event.preventDefault();
+    const currentValue = parseInt(slider.value, 10);
+    const step = event.deltaY < 0 ? 1 : -1; // Scroll up +1, down -1
+
+    let newValue = currentValue + step;
+    
+    // Clamp value (min 1, max 20 based on HTML input)
+    if (newValue < 1) newValue = 1;
+    if (newValue > 20) newValue = 20;
+    
+    if (newValue !== currentValue) {
+        slider.value = newValue;
+        
+        // Update display
+        const twitchScrollStepDisplay = document.getElementById('twitch-scroll-step-display');
+        if (twitchScrollStepDisplay) {
+            twitchScrollStepDisplay.textContent = `${newValue}%`;
+        }
+
+        // Debounced save
+        clearTimeout(twitchScrollSaveTimer);
+        twitchScrollSaveTimer = setTimeout(() => {
+            saveTwitchScrollSettings();
         }, 500);
     }
   }
@@ -587,6 +652,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function saveTwitchScrollSettings() {
+    const twitchScrollToggle = document.getElementById('twitch-scroll-toggle');
+    const twitchScrollStepSlider = document.getElementById('twitch-scroll-step-slider');
+
+    const settings = {
+        enabled: twitchScrollToggle.checked,
+        step: parseInt(twitchScrollStepSlider.value, 10)
+    };
+
+    chrome.storage.sync.set({ twitchScrollSettings: settings }, () => {
+         chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+         chrome.tabs.query({url: "*://*.twitch.tv/*"}, (tabs) => {
+             tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'SETTINGS_UPDATED' }));
+         });
+    });
+  }
+
   // --- UI Updates ---
   function applyTheme(theme) {
     document.body.classList.toggle('theme-dark', theme === 'dark');
@@ -649,6 +731,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const labelScrollStep = document.getElementById('labelScrollStep');
     if (labelScrollStep) labelScrollStep.textContent = s.scrollStep;
+
+    // Twitch Scroll Settings Localization
+    const twitchScrollSettingsHeader = document.getElementById('twitchScrollSettingsHeader');
+    if (twitchScrollSettingsHeader) twitchScrollSettingsHeader.textContent = s.twitchScrollSettings;
+    
+    const labelEnableTwitchScroll = document.getElementById('labelEnableTwitchScroll');
+    if (labelEnableTwitchScroll) labelEnableTwitchScroll.textContent = s.enableTwitchScroll;
+    
+    const labelTwitchScrollStep = document.getElementById('labelTwitchScrollStep');
+    if (labelTwitchScrollStep) labelTwitchScrollStep.textContent = s.scrollStep;
 
     // Account Settings Localization
     if (accountSettingsHeader) accountSettingsHeader.textContent = s.accountSettings;

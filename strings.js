@@ -42,7 +42,9 @@ const strings = {
     defaultVolume: "既定の音量",
     // Scroll Settings
     youtubeScrollSettings: "YouTubeマウスホイール音量",
-    enableYoutubeScroll: "ホイールでの音量調整を有効にする",
+    twitchScrollSettings: "Twitchマウスホイール音量",
+    enableYoutubeScroll: "YouTubeでホイール音量調整を有効にする",
+    enableTwitchScroll: "Twitchでホイール音量調整を有効にする",
     scrollStep: "ホイール1目盛りの変化量 (%)"
   },
   en: {
@@ -88,7 +90,9 @@ const strings = {
     defaultVolume: "Default Volume",
     // Scroll Settings
     youtubeScrollSettings: "YouTube Mouse Wheel Volume",
+    twitchScrollSettings: "Twitch Mouse Wheel Volume",
     enableYoutubeScroll: "Adjust volume via mouse wheel on YouTube",
+    enableTwitchScroll: "Adjust volume via mouse wheel on Twitch",
     scrollStep: "Volume change per step (%)"
   }
 };

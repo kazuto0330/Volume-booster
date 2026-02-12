@@ -85,6 +85,18 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
                     setupYouTubeVolumeScroll();
                 }
             }
+            // New: Check for Twitch player (simple heuristic)
+            if (window.location.hostname.includes('twitch.tv')) {
+                if (node.tagName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
+                    setupTwitchVolumeScroll();
+                }
+            }
+            // New: Check for Twitch player (simple heuristic)
+            if (window.location.hostname.includes('twitch.tv')) {
+                if (node.tagName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
+                    setupTwitchVolumeScroll();
+                }
+            }
           }
         });
       });
@@ -220,6 +232,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
     // YouTube Player Scroll Volume Control
     let scrollSettings = { enabled: false, step: 5 }; // Default
+    let twitchScrollSettings = { enabled: false, step: 5 }; // Twitch Default
 
     function setupYouTubeVolumeScroll() {
         if (!window.location.hostname.includes('youtube.com')) return;
@@ -278,6 +291,58 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
         player.dataset.volumeScrollAttached = 'true';
     }
+
+    function setupTwitchVolumeScroll() {
+        if (!window.location.hostname.includes('twitch.tv')) return;
+        
+        // Check if enabled
+        if (!twitchScrollSettings.enabled) return;
+
+        // Look for the video player container
+        const videos = document.getElementsByTagName('video');
+        if (videos.length === 0) return;
+        
+        const video = videos[0]; // Main video
+        
+        // We need a stable container to attach the event listener. 
+        // The .video-player__container seems to be a good candidate if available, or just use the video parent.
+        const playerContainer = video.closest('.video-player') || video.closest('[data-a-target="video-player"]');
+        
+        if (!playerContainer) return;
+        
+        if (playerContainer.dataset.volumeScrollAttached === 'true') return;
+
+        playerContainer.addEventListener('wheel', (event) => {
+             // Check enabled status
+             if (!twitchScrollSettings.enabled) return;
+
+             // Ignore if scrolling over controls
+             if (event.target.closest('button, input, [role="button"], [role="slider"]')) return;
+
+             // Ensure video is still there
+             if (!video) return;
+
+             event.preventDefault();
+             event.stopPropagation();
+
+             const stepVal = (twitchScrollSettings.step || 5) / 100;
+             const direction = event.deltaY > 0 ? -1 : 1;
+
+             let newVol = video.volume + (stepVal * direction);
+             if (newVol > 1) newVol = 1;
+             if (newVol < 0) newVol = 0;
+
+             // Directly set video volume for Twitch
+             video.volume = newVol;
+             if (newVol > 0 && video.muted) video.muted = false;
+
+             // Show overlay
+             showVolumeOverlay(newVol, playerContainer);
+
+        }, { passive: false, capture: true });
+
+        playerContainer.dataset.volumeScrollAttached = 'true';
+    }
   
     // ページ読み込み時に保存された設定を適用
     async function initializeFromStorage() {
@@ -288,7 +353,8 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             accountSettings: {},
             ytLiveSettings: { enabled: false, targetVolume: 100 },
             ytAutoSettings: { enabled: false, volume: 30 },
-            ytScrollSettings: { enabled: false, step: 5 }
+            ytScrollSettings: { enabled: false, step: 5 },
+            twitchScrollSettings: { enabled: false, step: 5 }
         });
         const settings = data.boostSettings || {};
         const accountSettings = data.accountSettings || {};
@@ -297,8 +363,10 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         
         // Update global scroll settings
         scrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
+        twitchScrollSettings = data.twitchScrollSettings || { enabled: false, step: 5 };
         
         setupYouTubeVolumeScroll();
+        setupTwitchVolumeScroll(); // Initialize Twitch Scroll
 
         // Apply YouTube Auto Volume (Player Volume)
         if (ytAuto.enabled && window.location.hostname.includes('youtube.com')) {
