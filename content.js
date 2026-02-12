@@ -233,6 +233,14 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              return;
         }
 
+        // Inject volume control script if not present
+        if (!document.getElementById('volume-booster-inject-volume')) {
+            const script = document.createElement('script');
+            script.id = 'volume-booster-inject-volume';
+            script.src = chrome.runtime.getURL('inject_volume.js');
+            (document.head || document.documentElement).appendChild(script);
+        }
+
         // Prefer 'movie_player' as it is the main interactive container, fallback to 'player'
         const player = document.getElementById('movie_player') || document.getElementById('player');
         if (!player) return;
@@ -261,7 +269,8 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              if (newVol > 1) newVol = 1;
              if (newVol < 0) newVol = 0;
              
-             video.volume = newVol;
+             // Send message to injected script to update YouTube player volume
+             window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: newVol * 100 }, '*');
              
              showVolumeOverlay(newVol, player);
 
