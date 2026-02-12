@@ -32,16 +32,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentLang = 'ja';
   let currentTheme = 'dark';
   let ytLiveSettings = { enabled: false, targetVolume: 100 };
+  let ytAutoSettings = { enabled: false, volume: 30 }; // Default values for Auto Set
   let ytScrollSettings = { enabled: false, step: 5 }; // Default values
   let ytSaveTimer;
+  let ytAutoSaveTimer;
   let ytScrollSaveTimer;
 
   // --- Initialization ---
   function initialize() {
-    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'accountSettings', 'ytLiveSettings', 'ytScrollSettings'], (settings) => {
+    chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'accountSettings', 'ytLiveSettings', 'ytAutoSettings', 'ytScrollSettings'], (settings) => {
       currentTheme = settings.theme || 'dark';
       currentLang = settings.language || 'ja';
       ytLiveSettings = settings.ytLiveSettings || { enabled: false, targetVolume: 100 };
+      ytAutoSettings = settings.ytAutoSettings || { enabled: false, volume: 30 };
       ytScrollSettings = settings.ytScrollSettings || { enabled: false, step: 5 };
       
       applyTheme(currentTheme);
@@ -59,6 +62,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ytValueDisplay) ytValueDisplay.textContent = `${ytLiveSettings.targetVolume}%`;
       
       updatePanelState(ytToggle, 'yt-live-slider');
+
+      // Update YT Auto UI
+      const ytAutoToggle = document.getElementById('yt-auto-toggle');
+      const ytAutoSlider = document.getElementById('yt-auto-slider');
+      const ytAutoValueDisplay = document.getElementById('yt-auto-value-display');
+
+      if (ytAutoToggle) ytAutoToggle.checked = ytAutoSettings.enabled;
+      if (ytAutoSlider) ytAutoSlider.value = ytAutoSettings.volume;
+      if (ytAutoValueDisplay) ytAutoValueDisplay.textContent = `${ytAutoSettings.volume}%`;
+
+      updatePanelState(ytAutoToggle, 'yt-auto-slider');
 
       // Update YT Scroll UI
       const ytScrollToggle = document.getElementById('yt-scroll-toggle');
@@ -133,6 +147,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ytToggle.addEventListener('change', () => {
             saveYtLiveSettings();
             updatePanelState(ytToggle, 'yt-live-slider');
+        });
+    }
+
+    // Auto Volume Settings Logic
+    const ytAutoToggle = document.getElementById('yt-auto-toggle');
+    const ytAutoSlider = document.getElementById('yt-auto-slider');
+    const ytAutoValueDisplay = document.getElementById('yt-auto-value-display');
+
+    if (ytAutoSlider && ytAutoValueDisplay) {
+        ytAutoSlider.addEventListener('input', () => {
+            ytAutoValueDisplay.textContent = `${ytAutoSlider.value}%`;
+        });
+        ytAutoSlider.addEventListener('change', () => {
+            saveYtAutoSettings();
+        });
+        ytAutoSlider.addEventListener('wheel', handleYtAutoSliderWheel);
+    }
+
+    if (ytAutoToggle) {
+        ytAutoToggle.addEventListener('change', () => {
+            saveYtAutoSettings();
+            updatePanelState(ytAutoToggle, 'yt-auto-slider');
         });
     }
 
@@ -217,6 +253,35 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(ytSaveTimer);
         ytSaveTimer = setTimeout(() => {
             saveYtLiveSettings();
+        }, 500);
+    }
+  }
+
+  function handleYtAutoSliderWheel(event) {
+    const slider = event.target;
+    event.preventDefault();
+    const currentValue = parseInt(slider.value, 10);
+    const step = event.deltaY < 0 ? 5 : -5; // Scroll up +5, down -5
+
+    let newValue = currentValue + step;
+    
+    // Clamp value (0-100)
+    if (newValue < 0) newValue = 0;
+    if (newValue > 100) newValue = 100;
+    
+    if (newValue !== currentValue) {
+        slider.value = newValue;
+        
+        // Update display
+        const ytAutoValueDisplay = document.getElementById('yt-auto-value-display');
+        if (ytAutoValueDisplay) {
+            ytAutoValueDisplay.textContent = `${newValue}%`;
+        }
+
+        // Debounced save
+        clearTimeout(ytAutoSaveTimer);
+        ytAutoSaveTimer = setTimeout(() => {
+            saveYtAutoSettings();
         }, 500);
     }
   }
@@ -488,6 +553,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function saveYtAutoSettings() {
+    const ytAutoToggle = document.getElementById('yt-auto-toggle');
+    const ytAutoSlider = document.getElementById('yt-auto-slider');
+    
+    const settings = {
+        enabled: ytAutoToggle.checked,
+        volume: parseInt(ytAutoSlider.value, 10)
+    };
+    
+    chrome.storage.sync.set({ ytAutoSettings: settings }, () => {
+         chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+         chrome.tabs.query({url: "*://*.youtube.com/*"}, (tabs) => {
+             tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'SETTINGS_UPDATED' }));
+         });
+    });
+  }
+
   function saveYtScrollSettings() {
     const ytScrollToggle = document.getElementById('yt-scroll-toggle');
     const ytScrollStepSlider = document.getElementById('yt-scroll-step-slider');
@@ -547,6 +629,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const labelTargetVolume = document.getElementById('labelTargetVolume');
     if (labelTargetVolume) labelTargetVolume.textContent = s.targetVolume;
+
+    // Auto Settings Localization
+    const youtubeAutoSettingsHeader = document.getElementById('youtubeAutoSettingsHeader');
+    if (youtubeAutoSettingsHeader) youtubeAutoSettingsHeader.textContent = s.youtubeAutoSettings;
+
+    const labelEnableYoutubeAuto = document.getElementById('labelEnableYoutubeAuto');
+    if (labelEnableYoutubeAuto) labelEnableYoutubeAuto.textContent = s.enableYoutubeAuto;
+
+    const labelDefaultVolume = document.getElementById('labelDefaultVolume');
+    if (labelDefaultVolume) labelDefaultVolume.textContent = s.defaultVolume;
 
     // Scroll Settings Localization
     const youtubeScrollSettingsHeader = document.getElementById('youtubeScrollSettingsHeader');

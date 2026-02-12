@@ -287,16 +287,39 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             boostSettings: {}, 
             accountSettings: {},
             ytLiveSettings: { enabled: false, targetVolume: 100 },
+            ytAutoSettings: { enabled: false, volume: 30 },
             ytScrollSettings: { enabled: false, step: 5 }
         });
         const settings = data.boostSettings || {};
         const accountSettings = data.accountSettings || {};
         const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 100 };
+        const ytAuto = data.ytAutoSettings || { enabled: false, volume: 30 };
         
         // Update global scroll settings
         scrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
         
         setupYouTubeVolumeScroll();
+
+        // Apply YouTube Auto Volume (Player Volume)
+        if (ytAuto.enabled && window.location.hostname.includes('youtube.com')) {
+             // Only apply if we haven't applied it for this "session" (url match) to avoid fighting user?
+             // Or simply apply on every navigation/load as requested ("when opening YouTube").
+             // Since URL_CHANGED calls this, it will apply on every video load.
+             
+             // Inject script if needed (might be redundant if setupYouTubeVolumeScroll did it, but safe to check)
+             if (!document.getElementById('volume-booster-inject-volume')) {
+                const script = document.createElement('script');
+                script.id = 'volume-booster-inject-volume';
+                script.src = chrome.runtime.getURL('inject_volume.js');
+                (document.head || document.documentElement).appendChild(script);
+             }
+
+             // Send message to set volume.
+             // We use a slight delay to ensure the player is ready and to override any YouTube saved volume.
+             setTimeout(() => {
+                 window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: ytAuto.volume }, '*');
+             }, 1000); 
+        }
         
         let targetBoost = null;
         let source = 'default';
