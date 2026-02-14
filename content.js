@@ -246,14 +246,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              return;
         }
 
-        // Inject volume control script if not present
-        if (!document.getElementById('volume-booster-inject-volume')) {
-            const script = document.createElement('script');
-            script.id = 'volume-booster-inject-volume';
-            script.src = chrome.runtime.getURL('inject_volume.js');
-            (document.head || document.documentElement).appendChild(script);
-        }
-
         // Prefer 'movie_player' as it is the main interactive container, fallback to 'player'
         const player = document.getElementById('movie_player') || document.getElementById('player');
         if (!player) return;
@@ -282,8 +274,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              if (newVol > 1) newVol = 1;
              if (newVol < 0) newVol = 0;
              
-             // Send message to injected script to update YouTube player volume
-             window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: newVol * 100 }, '*');
+             video.volume = newVol;
              
              showVolumeOverlay(newVol, player);
 
@@ -389,18 +380,13 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              // Or simply apply on every navigation/load as requested ("when opening YouTube").
              // Since URL_CHANGED calls this, it will apply on every video load.
              
-             // Inject script if needed (might be redundant if setupYouTubeVolumeScroll did it, but safe to check)
-             if (!document.getElementById('volume-booster-inject-volume')) {
-                const script = document.createElement('script');
-                script.id = 'volume-booster-inject-volume';
-                script.src = chrome.runtime.getURL('inject_volume.js');
-                (document.head || document.documentElement).appendChild(script);
-             }
-
              // Send message to set volume.
              // We use a slight delay to ensure the player is ready and to override any YouTube saved volume.
              setTimeout(() => {
-                 window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: ytAuto.volume }, '*');
+                 const video = document.querySelector('video');
+                 if (video) {
+                     video.volume = ytAuto.volume / 100;
+                 }
              }, 1000); 
         }
         
