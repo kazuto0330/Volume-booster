@@ -597,6 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyLanguage(lang) {
     currentLang = lang;
+    document.documentElement.lang = lang;
     document.getElementById('appName').textContent = strings[lang].appName;
     document.getElementById('temp-title').textContent = strings[lang].currentTab;
     document.getElementById('domain-title').textContent = strings[lang].siteWide;
