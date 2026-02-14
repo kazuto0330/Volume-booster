@@ -684,6 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyLanguage(lang) {
     currentLang = lang;
+    document.documentElement.lang = lang;
     const s = strings[lang];
     document.title = s.optionsTitle;
     document.getElementById('optionsTitle-h1').textContent = s.optionsTitle;
