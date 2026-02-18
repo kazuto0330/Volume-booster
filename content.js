@@ -153,14 +153,31 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       }
   }
 
-    // YouTube Live 判定 (Inject Script to access page context)
+    // Inject script globally for YouTube
+    function ensureInjectedScript() {
+        if (!window.location.hostname.includes('youtube.com')) return;
+        // Check if already injected by checking if the script tag exists
+        if (document.getElementById('volume-booster-inject')) return;
+
+        const script = document.createElement('script');
+        script.id = 'volume-booster-inject';
+        script.src = chrome.runtime.getURL('inject.js');
+        script.onload = function() {
+            this.remove(); 
+        };
+        (document.head || document.documentElement).appendChild(script);
+    }
+
+    // YouTube Live 判定 (Message based)
     function checkLiveStatusViaInjection() {
       return new Promise((resolve) => {
           if (!window.location.hostname.includes('youtube.com')) {
               resolve({ isLive: false, videoId: null });
               return;
           }
-  
+          
+          ensureInjectedScript();
+
           const listener = (event) => {
               if (event.source === window && event.data.type === 'VOLUME_BOOSTER_LIVE_STATUS_RESULT') {
                   window.removeEventListener('message', listener);
@@ -169,13 +186,8 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
           };
           window.addEventListener('message', listener);
   
-          // Inject script
-          const script = document.createElement('script');
-          script.src = chrome.runtime.getURL('inject.js');
-          script.onload = function() {
-              this.remove();
-          };
-          (document.head || document.documentElement).appendChild(script);
+          // Send message to check status
+          window.postMessage({ type: 'VOLUME_BOOSTER_CHECK_LIVE' }, '*');
   
           // Timeout fallback
           setTimeout(() => {
@@ -234,53 +246,72 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     let scrollSettings = { enabled: false, step: 5 }; // Default
     let twitchScrollSettings = { enabled: false, step: 5 }; // Twitch Default
 
-    function setupYouTubeVolumeScroll() {
-        if (!window.location.hostname.includes('youtube.com')) return;
+    // Global event listener for YouTube scroll (Event Delegation)
+    let isYouTubeScrollListenerAttached = false;
+    
+    function attachYouTubeGlobalScrollListener() {
+        if (isYouTubeScrollListenerAttached) return;
         
-        // Check if enabled
-        if (!scrollSettings.enabled) {
-             // If disabled, we should remove the listener if it was attached.
-             // However, removing anonymous listeners is hard. 
-             // We can just rely on the flag inside the listener or reload the page for disable to take effect cleanly,
-             // or simply check the global 'scrollSettings' inside the event handler.
-             return;
-        }
-
-        // Prefer 'movie_player' as it is the main interactive container, fallback to 'player'
-        const player = document.getElementById('movie_player') || document.getElementById('player');
-        if (!player) return;
-
-        if (player.dataset.volumeScrollAttached === 'true') return;
-
-        player.addEventListener('wheel', (event) => {
-             // Check enabled status dynamically
+        document.documentElement.addEventListener('wheel', (event) => {
+             // 1. Basic Checks
+             if (!window.location.hostname.includes('youtube.com')) return;
              if (!scrollSettings.enabled) return;
 
-             // Ignore if scrolling over the control bar, top bar, or popups (like settings menu)
-             if (event.target.closest('.ytp-chrome-bottom, .ytp-chrome-top, .ytp-popup')) return;
+             // 2. Target Check: Must be inside the player
+             // We use #movie_player as the main container for desktop web
+             const player = event.target.closest('#movie_player') || event.target.closest('.html5-video-player');
+             if (!player) return;
 
+             // 3. Ignore controls/popups
+             if (event.target.closest('.ytp-chrome-bottom, .ytp-chrome-top, .ytp-popup, .ytp-settings-menu')) return;
+
+             // 4. Ensure video element exists
              const video = document.querySelector('video.html5-main-video') || player.querySelector('video');
              if (!video) return;
-             
+
+             // Prevent default scrolling
              event.preventDefault();
              event.stopPropagation(); // Stop page scrolling
 
-             // Sensitivity (convert percent step to 0-1 range)
-             const stepVal = (scrollSettings.step || 5) / 100;
+             const stepVal = (scrollSettings.step || 5);
              const direction = event.deltaY > 0 ? -1 : 1; 
              
-             let newVol = video.volume + (stepVal * direction);
-             // Clamp
-             if (newVol > 1) newVol = 1;
+             // Calculate new volume
+             let currentVol = Math.round(video.volume * 100);
+             let newVol = currentVol + (stepVal * direction);
+             
+             if (newVol > 100) newVol = 100;
              if (newVol < 0) newVol = 0;
              
-             video.volume = newVol;
+             // 5. Send command to inject.js (which talks to movie_player API)
+             // Ensure script is injected before sending
+             ensureInjectedScript();
+             window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: newVol }, '*');
              
-             showVolumeOverlay(newVol, player);
+             showVolumeOverlay(newVol / 100, player);
 
         }, { passive: false, capture: true }); // Capture phase!
 
-        player.dataset.volumeScrollAttached = 'true';
+        isYouTubeScrollListenerAttached = true;
+        
+        // Listen for YouTube navigation events to re-ensure injection
+        document.addEventListener('yt-navigate-finish', () => {
+             if (scrollSettings.enabled) {
+                 ensureInjectedScript();
+             }
+        });
+    }
+
+    function setupYouTubeVolumeScroll() {
+        if (!window.location.hostname.includes('youtube.com')) return;
+        
+        // Just attach the global listener once
+        attachYouTubeGlobalScrollListener();
+        
+        // Ensure script is injected on setup
+        if (scrollSettings.enabled) {
+            ensureInjectedScript();
+        }
     }
 
     function setupTwitchVolumeScroll() {
@@ -371,6 +402,10 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         scrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
         twitchScrollSettings = data.twitchScrollSettings || { enabled: false, step: 5 };
         
+        if (window.location.hostname.includes('youtube.com')) {
+            ensureInjectedScript();
+        }
+
         setupYouTubeVolumeScroll();
         setupTwitchVolumeScroll(); // Initialize Twitch Scroll
 
