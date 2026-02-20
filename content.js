@@ -252,6 +252,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     function attachYouTubeGlobalScrollListener() {
         if (isYouTubeScrollListenerAttached) return;
         
+        console.log("Volume Booster: Attaching YouTube global scroll listener");
         document.documentElement.addEventListener('wheel', (event) => {
              // 1. Basic Checks
              if (!window.location.hostname.includes('youtube.com')) return;
@@ -259,16 +260,14 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              if (window.location.pathname === '/') return;
 
              // 2. Target Check: Must be inside the player
-             // We use #movie_player as the main container for desktop web
-             const player = event.target.closest('#movie_player') || event.target.closest('.html5-video-player');
+             const player = event.target.closest('#movie_player') || 
+                            event.target.closest('.html5-video-player') || 
+                            event.target.closest('#player-container');
+             
              if (!player) return;
 
              // 3. Ignore controls/popups
              if (event.target.closest('.ytp-chrome-bottom, .ytp-chrome-top, .ytp-popup, .ytp-settings-menu')) return;
-
-             // 4. Ensure video element exists
-             const video = document.querySelector('video.html5-main-video') || player.querySelector('video');
-             if (!video) return;
 
              // Prevent default scrolling
              event.preventDefault();
@@ -277,26 +276,33 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              const stepVal = (scrollSettings.step || 5);
              const direction = event.deltaY > 0 ? -1 : 1; 
              
-             // Calculate new volume
-             let currentVol = Math.round(video.volume * 100);
-             let newVol = currentVol + (stepVal * direction);
-             
-             if (newVol > 100) newVol = 100;
-             if (newVol < 0) newVol = 0;
+             const delta = stepVal * direction;
+             console.log(`Volume Booster: Scroll detected. Direction: ${direction}, Sending delta: ${delta}`);
              
              // 5. Send command to inject.js (which talks to movie_player API)
-             // Ensure script is injected before sending
              ensureInjectedScript();
-             window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: newVol }, '*');
-             
-             showVolumeOverlay(newVol / 100, player);
+             window.postMessage({ type: 'VOLUME_BOOSTER_ADJUST_VOLUME', delta: delta }, '*');
 
         }, { passive: false, capture: true }); // Capture phase!
 
+        // Listen for volume update result from inject.js to show overlay
+        window.addEventListener('message', (event) => {
+            if (event.source === window && event.data.type === 'VOLUME_BOOSTER_VOLUME_UPDATED') {
+                const player = document.querySelector('#movie_player') || 
+                               document.querySelector('.html5-video-player') || 
+                               document.querySelector('#player-container');
+                if (player) {
+                    showVolumeOverlay(event.data.volume / 100, player);
+                }
+            }
+        });
+
         isYouTubeScrollListenerAttached = true;
         
-        // Listen for YouTube navigation events to re-ensure injection
+        // Listen for YouTube navigation events to re-ensure injection and settings
         document.addEventListener('yt-navigate-finish', () => {
+             console.log("Volume Booster: YouTube navigation finished (yt-navigate-finish)");
+             initializeFromStorage(); // Re-read settings on navigation
              if (scrollSettings.enabled) {
                  ensureInjectedScript();
              }
