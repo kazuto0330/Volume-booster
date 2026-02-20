@@ -11,15 +11,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Listen for tab updates (e.g., navigation)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // Check if the tab has a URL and the page is fully loaded
-  if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith('http')) {
+  // Check if the tab has a URL and either the status is complete OR the URL changed (SPA navigation)
+  const isComplete = changeInfo.status === 'complete';
+  const isUrlChanged = changeInfo.url !== undefined;
+
+  if ((isComplete || isUrlChanged) && tab.url && tab.url.startsWith('http')) {
     let url = tab.url;
     url = url.replace(/^https?:\/\//, '');
     url = url.replace(/^www\./, '');
     const normalizedUrl = url;
 
     // Try to notify existing content script first
-    chrome.tabs.sendMessage(tabId, { type: 'URL_CHANGED' }, (response) => {
+    chrome.tabs.sendMessage(tabId, { type: 'URL_CHANGED', url: tab.url }, (response) => {
       if (chrome.runtime.lastError) {
         // Content script not present, proceed to check settings and inject if needed
         checkAndInject(tabId, normalizedUrl);

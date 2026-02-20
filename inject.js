@@ -4,14 +4,21 @@
   window.volumeBoosterInjected = true;
 
   function getPlayer() {
-    return document.getElementById('movie_player');
+    const players = document.querySelectorAll('#movie_player, .html5-video-player');
+    for (const p of players) {
+      if (p.offsetWidth > 0 && p.offsetHeight > 0) {
+        return p;
+      }
+    }
+    return document.getElementById('movie_player') || 
+           document.querySelector('.html5-video-player') || 
+           document.querySelector('#player-container #movie_player');
   }
 
   function checkLiveStatus() {
     let isLive = false;
     let currentVideoId = null;
     try {
-      // 1. Try to get from the Movie Player API (works for SPA navigation)
       const player = getPlayer();
       if (player && typeof player.getPlayerResponse === 'function') {
         const resp = player.getPlayerResponse();
@@ -19,19 +26,15 @@
             if (resp.videoDetails.isLiveContent) isLive = true;
             currentVideoId = resp.videoDetails.videoId;
         }
-      } 
-      // 2. Fallback to global variable (works for initial load if player api not ready)
-      else if (window.ytInitialPlayerResponse) {
+      } else if (window.ytInitialPlayerResponse) {
         if (window.ytInitialPlayerResponse.videoDetails) {
             if (window.ytInitialPlayerResponse.videoDetails.isLiveContent) isLive = true;
             currentVideoId = window.ytInitialPlayerResponse.videoDetails.videoId;
         }
       }
     } catch (e) {
-      console.error("Volume Booster Inject: Error checking live status", e);
+      // Silent error
     }
-
-    // Send result back to content script
     window.postMessage({ type: 'VOLUME_BOOSTER_LIVE_STATUS_RESULT', isLive: isLive, videoId: currentVideoId }, '*');
   }
 
@@ -42,9 +45,38 @@
         player.setVolume(volume);
       }
     } catch (e) {
-      console.error("Volume Booster Inject: Error setting volume", e);
+      // Silent error
     }
   }
+
+  function adjustVolume(delta) {
+    try {
+      const player = getPlayer();
+      if (player && typeof player.getVolume === 'function' && typeof player.setVolume === 'function') {
+        const currentVol = player.getVolume();
+        let newVol = currentVol + delta;
+        if (newVol > 100) newVol = 100;
+        if (newVol < 0) newVol = 0;
+        
+        player.setVolume(newVol);
+        window.postMessage({ type: 'VOLUME_BOOSTER_VOLUME_UPDATED', volume: newVol }, '*');
+      }
+    } catch (e) {
+      // Silent error
+    }
+  }
+
+  window.addEventListener('message', function(event) {
+    if (event.source !== window) return;
+    
+    if (event.data.type === 'VOLUME_BOOSTER_CHECK_LIVE') {
+      checkLiveStatus();
+    } else if (event.data.type === 'VOLUME_BOOSTER_SET_VOLUME') {
+      setVolume(event.data.volume);
+    } else if (event.data.type === 'VOLUME_BOOSTER_ADJUST_VOLUME') {
+      adjustVolume(event.data.delta);
+    }
+  });
 
   window.addEventListener('message', function(event) {
     if (event.source !== window) return;
