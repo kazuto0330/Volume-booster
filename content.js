@@ -252,7 +252,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     function attachYouTubeGlobalScrollListener() {
         if (isYouTubeScrollListenerAttached) return;
         
-        console.log("Volume Booster: Attaching YouTube global scroll listener");
         document.documentElement.addEventListener('wheel', (event) => {
              // 1. Basic Checks
              if (!window.location.hostname.includes('youtube.com')) return;
@@ -277,7 +276,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              const direction = event.deltaY > 0 ? -1 : 1; 
              
              const delta = stepVal * direction;
-             console.log(`Volume Booster: Scroll detected. Direction: ${direction}, Sending delta: ${delta}`);
              
              // 5. Send command to inject.js (which talks to movie_player API)
              ensureInjectedScript();
@@ -301,7 +299,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         
         // Listen for YouTube navigation events to re-ensure injection and settings
         document.addEventListener('yt-navigate-finish', () => {
-             console.log("Volume Booster: YouTube navigation finished (yt-navigate-finish)");
              initializeFromStorage(); // Re-read settings on navigation
              if (scrollSettings.enabled) {
                  ensureInjectedScript();
