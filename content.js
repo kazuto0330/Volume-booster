@@ -256,6 +256,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
              // 1. Basic Checks
              if (!window.location.hostname.includes('youtube.com')) return;
              if (!scrollSettings.enabled) return;
+             if (window.location.pathname === '/') return;
 
              // 2. Target Check: Must be inside the player
              // We use #movie_player as the main container for desktop web
