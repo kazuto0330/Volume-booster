@@ -240,15 +240,44 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Handlers ---
   function updatePanelState(toggle, sliderId) {
       if (!toggle) return;
-      const panel = toggle.closest('.panel-card');
-      const slider = document.getElementById(sliderId);
       
-      if (!toggle.checked) {
-          panel.classList.add('dimmed');
-          if (slider) slider.disabled = true;
+      const slider = document.getElementById(sliderId);
+      const isScrollSetting = toggle.id === 'yt-scroll-toggle' || toggle.id === 'twitch-scroll-toggle';
+      
+      if (isScrollSetting) {
+          // For scroll settings inside the consolidated panel
+          // Instead of dimming the whole panel, we might just disable the slider visually
+          // or target a specific wrapper div if we added one. 
+          // Current HTML structure for scroll settings:
+          // <div> <h3>...</h3> <toggle> ... </toggle> <range> ... </range> </div>
+          
+          const container = toggle.closest('div').parentElement; // The wrapper div inside panel-card
+          // Actually, looking at HTML:
+          // <div style="margin-bottom: 24px;"> ... </div> for YouTube
+          // <div> ... </div> for Twitch
+          // The toggle is inside .toggle-container
+          
+          const sectionWrapper = toggle.closest('.toggle-container').parentElement;
+          
+          if (!toggle.checked) {
+              sectionWrapper.style.opacity = '0.6';
+              sectionWrapper.style.filter = 'grayscale(0.2)';
+              if (slider) slider.disabled = true;
+          } else {
+              sectionWrapper.style.opacity = '1';
+              sectionWrapper.style.filter = 'none';
+              if (slider) slider.disabled = false;
+          }
       } else {
-          panel.classList.remove('dimmed');
-          if (slider) slider.disabled = false;
+          // Original logic for standalone panels
+          const panel = toggle.closest('.panel-card');
+          if (!toggle.checked) {
+              panel.classList.add('dimmed');
+              if (slider) slider.disabled = true;
+          } else {
+              panel.classList.remove('dimmed');
+              if (slider) slider.disabled = false;
+          }
       }
   }
 
@@ -724,6 +753,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (labelDefaultVolume) labelDefaultVolume.textContent = s.defaultVolume;
 
     // Scroll Settings Localization
+    const mouseWheelSettingsHeader = document.getElementById('mouseWheelSettingsHeader');
+    if (mouseWheelSettingsHeader) mouseWheelSettingsHeader.textContent = s.mouseWheelSettings;
+
     const youtubeScrollSettingsHeader = document.getElementById('youtubeScrollSettingsHeader');
     if (youtubeScrollSettingsHeader) youtubeScrollSettingsHeader.textContent = s.youtubeScrollSettings;
     

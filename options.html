@@ -52,7 +52,7 @@
     }
 
     .container {
-      max-width: 1000px; /* Increased width for 2 columns */
+      max-width: 1200px; /* Increased width for 2 columns */
       margin: 0 auto;
       background-color: transparent; /* Container itself is transparent now */
       display: flex;
@@ -79,7 +79,7 @@
     /* Layout */
     .content-grid {
         display: grid;
-        grid-template-columns: 2fr 1fr;
+        grid-template-columns: 1.5fr 1fr;
         gap: 24px;
         align-items: start;
     }
@@ -270,7 +270,9 @@
     }
     .col-domain {
       font-weight: 500;
-      word-break: break-all;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       font-size: 17px;
     }
     
@@ -604,41 +606,46 @@
                 </div>
             </div>
 
-            <!-- YouTube Scroll Settings -->
+            <!-- Mouse Wheel Volume Settings -->
             <div class="panel-card">
-                <h2 id="youtubeScrollSettingsHeader">YouTube Scroll Settings</h2>
-                <div class="toggle-container">
-                    <span id="labelEnableYoutubeScroll" class="toggle-label">Enable Feature</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="yt-scroll-toggle">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="range-container">
-                    <div class="range-label">
-                        <span id="labelScrollStep">Step Size</span>
-                        <span id="yt-scroll-step-display">5%</span>
+                <h2 id="mouseWheelSettingsHeader">Mouse Wheel Volume Settings</h2>
+                
+                <!-- YouTube Scroll Settings -->
+                <div style="margin-bottom: 24px;">
+                    <h3 id="youtubeScrollSettingsHeader" style="font-size: 15px; margin: 0 0 12px 0; color: var(--text-color);">YouTube</h3>
+                    <div class="toggle-container">
+                        <span id="labelEnableYoutubeScroll" class="toggle-label">Enable Feature</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="yt-scroll-toggle">
+                            <span class="slider"></span>
+                        </label>
                     </div>
-                    <input type="range" id="yt-scroll-step-slider" min="1" max="20" value="5">
+                    <div class="range-container">
+                        <div class="range-label">
+                            <span id="labelScrollStep">Step Size</span>
+                            <span id="yt-scroll-step-display">5%</span>
+                        </div>
+                        <input type="range" id="yt-scroll-step-slider" min="1" max="20" value="5">
+                    </div>
                 </div>
-            </div>
 
-            <!-- Twitch Scroll Settings -->
-            <div class="panel-card">
-                <h2 id="twitchScrollSettingsHeader">Twitch Scroll Settings</h2>
-                <div class="toggle-container">
-                    <span id="labelEnableTwitchScroll" class="toggle-label">Enable Feature</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="twitch-scroll-toggle">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="range-container">
-                    <div class="range-label">
-                        <span id="labelTwitchScrollStep">Step Size</span>
-                        <span id="twitch-scroll-step-display">5%</span>
+                <!-- Twitch Scroll Settings -->
+                <div>
+                    <h3 id="twitchScrollSettingsHeader" style="font-size: 15px; margin: 0 0 12px 0; color: var(--text-color);">Twitch</h3>
+                    <div class="toggle-container">
+                        <span id="labelEnableTwitchScroll" class="toggle-label">Enable Feature</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="twitch-scroll-toggle">
+                            <span class="slider"></span>
+                        </label>
                     </div>
-                    <input type="range" id="twitch-scroll-step-slider" min="1" max="20" value="5">
+                    <div class="range-container">
+                        <div class="range-label">
+                            <span id="labelTwitchScrollStep">Step Size</span>
+                            <span id="twitch-scroll-step-display">5%</span>
+                        </div>
+                        <input type="range" id="twitch-scroll-step-slider" min="1" max="20" value="5">
+                    </div>
                 </div>
             </div>
 

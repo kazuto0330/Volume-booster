@@ -217,14 +217,14 @@
     }
 
     /* Reset Menu Styles */
-    .reset-menu-container {
+    .menu-container {
       position: relative;
     }
-    .reset-menu {
+    .popup-menu {
       position: absolute;
       bottom: 100%;
       right: 0;
-      width: 200px;
+      min-width: 140px;
       background-color: var(--input-bg-color);
       border: 1px solid var(--border-color);
       border-radius: 6px;
@@ -235,10 +235,10 @@
       margin-bottom: 8px;
       overflow: hidden;
     }
-    .reset-menu.show {
+    .popup-menu.show {
       display: flex;
     }
-    .reset-menu-item {
+    .menu-item {
       padding: 10px 12px;
       font-size: 13px;
       color: var(--text-color);
@@ -248,16 +248,51 @@
       cursor: pointer;
       transition: background-color 0.2s;
       width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .reset-menu-item:hover {
+    .menu-item:hover {
       background-color: rgba(0,0,0,0.05);
     }
-    body.theme-dark .reset-menu-item:hover {
+    body.theme-dark .menu-item:hover {
       background-color: rgba(255,255,255,0.1);
     }
-    .reset-menu-item:disabled {
+    .menu-item:disabled {
         opacity: 0.5;
         cursor: default;
+    }
+
+    /* Tooltip Styles */
+    .slider-tooltip {
+        position: absolute;
+        background-color: var(--title-color); /* Use title color for high contrast bg */
+        color: var(--bg-color); /* Use bg color for high contrast text */
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+        z-index: 200;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        top: -35px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .slider-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: var(--title-color) transparent transparent transparent;
+    }
+    .slider-container-wrapper {
+        position: relative;
     }
   </style>
 </head>
@@ -272,7 +307,8 @@
             <span id="domain-active" class="active-indicator">ACTIVE</span>
         </div>
     </div>
-    <div class="controls-container">
+    <div class="controls-container slider-container-wrapper">
+      <div id="tooltip-domain" class="slider-tooltip"></div>
       <input type="range" id="domain-boost-slider" min="0" max="600" value="100">
       <div class="number-input-wrapper">
         <input type="number" id="domain-boost-input" min="0" max="600" value="100">
@@ -287,7 +323,8 @@
             <span id="account-active" class="active-indicator">ACTIVE</span>
          </div>
     </div>
-    <div class="controls-container">
+    <div class="controls-container slider-container-wrapper">
+      <div id="tooltip-account" class="slider-tooltip"></div>
       <input type="range" id="account-boost-slider" min="0" max="600" value="100">
       <div class="number-input-wrapper">
         <input type="number" id="account-boost-input" min="0" max="600" value="100">
@@ -302,7 +339,8 @@
             <span id="temp-active" class="active-indicator">ACTIVE</span>
         </div>
     </div>
-    <div class="controls-container">
+    <div class="controls-container slider-container-wrapper">
+      <div id="tooltip-temp" class="slider-tooltip"></div>
       <input type="range" id="temp-boost-slider" min="0" max="600" value="100">
       <div class="number-input-wrapper">
         <input type="number" id="temp-boost-input" min="0" max="600" value="100">
@@ -311,15 +349,15 @@
   </div>
 
   <div class="footer">
-    <div id="language-selector-container">
-      <!-- Language dropdown will be inserted here by JavaScript -->
+    <div id="language-selector-container" class="menu-container">
+      <!-- Language button and menu will be inserted here by JavaScript -->
     </div>
     <div class="settings-controls">
-      <div class="reset-menu-container">
+      <div class="menu-container">
           <button id="global-reset-btn" class="icon-btn" title="Reset Settings">
             <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
           </button>
-          <div id="reset-menu" class="reset-menu">
+          <div id="reset-menu" class="popup-menu">
               <!-- Menu items injected by JS -->
           </div>
       </div>

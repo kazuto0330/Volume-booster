@@ -27,16 +27,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const languageSelectorContainer = document.getElementById('language-selector-container');
-  let languageSelect; // Will be created dynamically
+  let languageBtn;
+  let languageMenu;
 
   const domainTitle = document.getElementById('domain-title');
   const domainDisplay = document.getElementById('current-domain-display');
+
+  // Tooltips
+  const tooltipDomain = document.getElementById('tooltip-domain');
+  const tooltipAccount = document.getElementById('tooltip-account');
+  const tooltipTemp = document.getElementById('tooltip-temp');
 
   // State
   let currentTab = null;
   let currentDomain = null;
   let currentAccountName = null;
   let debounceTimer;
+  let tooltipTimer;
   let currentLang = 'en'; // Default to English
   let currentTheme = 'light';
   
@@ -75,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       currentLang = initialLang;
-      languageSelect.value = currentLang; // Set dropdown value
+      // languageSelect.value = currentLang; // No longer select element
       applyLanguage(currentLang);
       initializePopupContent();
     });
@@ -84,28 +91,40 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function initializeLanguageSelector() {
-    languageSelectorContainer.innerHTML = ''; // Clear existing content to prevent duplicates
-    languageSelect = document.createElement('select');
-    languageSelect.id = 'language-select';
-    languageSelect.style.cssText = `
-      padding: 5px 8px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      background-color: var(--input-bg-color);
-      color: var(--text-color);
-      font-size: 12px;
-      cursor: pointer;
-      outline: none;
-      vertical-align: middle;
-    `;
+    languageSelectorContainer.innerHTML = '';
+    
+    // Create Button
+    languageBtn = document.createElement('button');
+    languageBtn.className = 'icon-btn';
+    languageBtn.title = 'Language';
+    languageBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>`;
+    
+    // Create Menu
+    languageMenu = document.createElement('div');
+    languageMenu.className = 'popup-menu';
+    languageMenu.style.left = '0'; // Align left for this one
+    languageMenu.style.right = 'auto';
 
     for (const langCode in availableLanguages) {
-      const option = document.createElement('option');
-      option.value = langCode;
-      option.textContent = availableLanguages[langCode];
-      languageSelect.appendChild(option);
+      const item = document.createElement('button');
+      item.className = 'menu-item';
+      item.textContent = availableLanguages[langCode];
+      item.dataset.value = langCode;
+      item.addEventListener('click', () => {
+          handleLanguageChange(langCode);
+          languageMenu.classList.remove('show');
+      });
+      languageMenu.appendChild(item);
     }
-    languageSelectorContainer.appendChild(languageSelect);
+
+    languageSelectorContainer.appendChild(languageBtn);
+    languageSelectorContainer.appendChild(languageMenu);
+
+    languageBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeAllMenus(); // Close other menus
+        languageMenu.classList.toggle('show');
+    });
   }
 
   function initializeResetMenu() {
@@ -113,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Domain Reset Item
     domainResetItem = document.createElement('button');
-    domainResetItem.className = 'reset-menu-item';
+    domainResetItem.className = 'menu-item';
     domainResetItem.addEventListener('click', () => {
         handleDomainReset();
         resetMenu.classList.remove('show');
@@ -122,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Account Reset Item
     accountResetItem = document.createElement('button');
-    accountResetItem.className = 'reset-menu-item';
+    accountResetItem.className = 'menu-item';
     accountResetItem.style.display = 'none'; // Hidden by default
     accountResetItem.addEventListener('click', () => {
         handleAccountReset();
@@ -132,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Temp Reset Item
     tempResetItem = document.createElement('button');
-    tempResetItem.className = 'reset-menu-item';
+    tempResetItem.className = 'menu-item';
     tempResetItem.addEventListener('click', () => {
         handleTempReset();
         resetMenu.classList.remove('show');
@@ -141,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // No Settings Item
     noSettingsItem = document.createElement('div');
-    noSettingsItem.className = 'reset-menu-item';
+    noSettingsItem.className = 'menu-item';
     noSettingsItem.style.cursor = 'default';
     noSettingsItem.style.color = 'var(--secondary-text-color)';
     // Prevent hover effect or click
@@ -290,15 +309,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset Listeners
     globalResetBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        closeAllMenus();
         resetMenu.classList.toggle('show');
     });
 
     // Close menu when clicking outside
     document.addEventListener('click', (event) => {
-        if (!event.target.closest('.reset-menu-container')) {
-            resetMenu.classList.remove('show');
+        if (!event.target.closest('.menu-container')) {
+            closeAllMenus();
         }
     });
+
+    // Tooltip Listeners
+    setupTooltip(domainSlider, tooltipDomain, 'tooltipDomain');
+    setupTooltip(accountSlider, tooltipAccount, 'tooltipAccount');
+    setupTooltip(tempSlider, tooltipTemp, 'tooltipTemp');
 
     // Select text on click for number inputs
     tempNumberInput.addEventListener('click', (e) => e.target.select());
@@ -312,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Other UI listeners
     themeToggleBtn.addEventListener('click', handleThemeToggle);
-    languageSelect.addEventListener('change', handleLanguageChange);
+    // languageSelect.addEventListener('change', handleLanguageChange); // Removed
     optionsBtn.addEventListener('click', () => {
       chrome.runtime.openOptionsPage();
     });
@@ -323,6 +348,29 @@ document.addEventListener('DOMContentLoaded', () => {
         initialize();
       }
     });
+  }
+
+  function setupTooltip(element, tooltipElement, stringKey) {
+      element.addEventListener('mouseenter', () => {
+          tooltipTimer = setTimeout(() => {
+              tooltipElement.textContent = strings[currentLang][stringKey];
+              tooltipElement.style.opacity = '1';
+          }, 500); // 0.5s delay
+      });
+      element.addEventListener('mouseleave', () => {
+          clearTimeout(tooltipTimer);
+          tooltipElement.style.opacity = '0';
+      });
+      element.addEventListener('input', () => {
+          // Hide tooltip while dragging
+          clearTimeout(tooltipTimer);
+          tooltipElement.style.opacity = '0';
+      });
+  }
+
+  function closeAllMenus() {
+      resetMenu.classList.remove('show');
+      if (languageMenu) languageMenu.classList.remove('show');
   }
 
   // --- Handlers ---
@@ -517,8 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function handleLanguageChange() {
-    const newLang = languageSelect.value;
+  function handleLanguageChange(newLang) {
     chrome.storage.sync.set({ language: newLang }, () => {
       currentLang = newLang;
       applyLanguage(newLang);

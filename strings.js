@@ -31,6 +31,10 @@ const strings = {
     alertBoost: "ブースト率には0から600までの数値を入力してください。",
     resetAllSettings: "すべての設定をリセット",
     resetConfirm: "すべての設定をリセットしてもよろしいですか？この操作は元に戻せません。",
+    // Tooltips
+    tooltipDomain: "このサイト全体の音量を設定します (保存されます)",
+    tooltipAccount: "このアカウントの音量を設定します (保存されます)",
+    tooltipTemp: "現在のタブの音量のみ一時的に変更します",
     // New Settings
     generalSettings: "一般設定",
     youtubeLiveSettings: "YouTube Live設定",
@@ -41,8 +45,9 @@ const strings = {
     enableYoutubeAuto: "YouTubeを開いた時に音量を自動設定する",
     defaultVolume: "既定の音量",
     // Scroll Settings
-    youtubeScrollSettings: "YouTubeマウスホイール音量",
-    twitchScrollSettings: "Twitchマウスホイール音量",
+    mouseWheelSettings: "マウスホイール音量設定",
+    youtubeScrollSettings: "YouTube",
+    twitchScrollSettings: "Twitch",
     enableYoutubeScroll: "YouTubeでホイール音量調整を有効にする",
     enableTwitchScroll: "Twitchでホイール音量調整を有効にする",
     scrollStep: "ホイール1目盛りの変化量 (%)"
@@ -62,6 +67,10 @@ const strings = {
     resetTemp: "Reset Current Tab Setting",
     noSettingsToReset: "All settings are default",
     statusUnsupported: "Not available on this page.",
+    // Tooltips
+    tooltipDomain: "Set volume for this entire site (Saved)",
+    tooltipAccount: "Set volume for this account (Saved)",
+    tooltipTemp: "Temporarily change volume for current tab only",
     // Options
     optionsTitle: "Volume Booster Settings",
     accountSettings: "Account Settings",
@@ -89,8 +98,9 @@ const strings = {
     enableYoutubeAuto: "Automatically set volume when opening YouTube",
     defaultVolume: "Default Volume",
     // Scroll Settings
-    youtubeScrollSettings: "YouTube Mouse Wheel Volume",
-    twitchScrollSettings: "Twitch Mouse Wheel Volume",
+    mouseWheelSettings: "Mouse Wheel Volume Settings",
+    youtubeScrollSettings: "YouTube",
+    twitchScrollSettings: "Twitch",
     enableYoutubeScroll: "Adjust volume via mouse wheel on YouTube",
     enableTwitchScroll: "Adjust volume via mouse wheel on Twitch",
     scrollStep: "Volume change per step (%)"
