@@ -782,6 +782,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (headerActionAccount) headerActionAccount.textContent = s.headerAction;
   }
 
+  function escapeHTML(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function renderSettingsList(settings) {
     settingsList.innerHTML = '';
     const domains = Object.keys(settings);
@@ -800,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const kebabIcon = `<svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>`;
 
       item.innerHTML = `
-        <div class="col-domain">${domain}</div>
+        <div class="col-domain">${escapeHTML(domain)}</div>
         <div class="col-boost">
           <div class="boost-input-wrapper">
              <input type="number" class="list-boost-input" min="0" max="600" value="${settings[domain]}" data-domain="${domain}">
@@ -848,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const kebabIcon = `<svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>`;
 
       item.innerHTML = `
-        <div class="col-domain">${accountName}</div>
+        <div class="col-domain">${escapeHTML(accountName)}</div>
         <div class="col-boost">
           <div class="boost-input-wrapper">
              <input type="number" class="list-boost-input" min="0" max="600" value="${settings[key]}" data-key="${key}">

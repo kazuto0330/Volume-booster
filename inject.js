@@ -77,14 +77,4 @@
       adjustVolume(event.data.delta);
     }
   });
-
-  window.addEventListener('message', function(event) {
-    if (event.source !== window) return;
-    
-    if (event.data.type === 'VOLUME_BOOSTER_CHECK_LIVE') {
-      checkLiveStatus();
-    } else if (event.data.type === 'VOLUME_BOOSTER_SET_VOLUME') {
-      setVolume(event.data.volume);
-    }
-  });
 })();

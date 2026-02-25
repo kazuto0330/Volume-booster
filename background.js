@@ -6,7 +6,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'SETTINGS_UPDATED') {
     // Settings were updated, potentially react here if needed.
   }
-  return true;
 });
 
 // Listen for tab updates (e.g., navigation)

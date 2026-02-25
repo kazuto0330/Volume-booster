@@ -91,12 +91,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
                     setupTwitchVolumeScroll();
                 }
             }
-            // New: Check for Twitch player (simple heuristic)
-            if (window.location.hostname.includes('twitch.tv')) {
-                if (node.tagName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
-                    setupTwitchVolumeScroll();
-                }
-            }
           }
         });
       });
@@ -118,7 +112,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       initializeFromStorage();
       sendResponse({ status: "ok" });
     }
-    return true; // 非同期レスポンスのためにtrueを返す
   });
 
   // URLの正規化（プロトコルとwww.を除去）
