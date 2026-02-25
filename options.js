@@ -31,10 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // State
   let currentLang = 'ja';
   let currentTheme = 'dark';
-  let ytLiveSettings = { enabled: false, targetVolume: 100 };
-  let ytAutoSettings = { enabled: false, volume: 30 }; // Default values for Auto Set
-  let ytScrollSettings = { enabled: false, step: 5 }; // Default values
-  let twitchScrollSettings = { enabled: false, step: 5 }; // Twitch Default
+  let ytLiveSettings = { enabled: false, targetVolume: 60 };
+  let ytAutoSettings = { enabled: true, volume: 30 }; // Default values for Auto Set
+  let ytScrollSettings = { enabled: true, step: 5 }; // Default values
+  let twitchScrollSettings = { enabled: true, step: 5 }; // Twitch Default
   let ytSaveTimer;
   let ytAutoSaveTimer;
   let ytScrollSaveTimer;
@@ -45,10 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.get(['theme', 'language', 'boostSettings', 'accountSettings', 'ytLiveSettings', 'ytAutoSettings', 'ytScrollSettings', 'twitchScrollSettings'], (settings) => {
       currentTheme = settings.theme || 'dark';
       currentLang = settings.language || 'ja';
-      ytLiveSettings = settings.ytLiveSettings || { enabled: false, targetVolume: 100 };
-      ytAutoSettings = settings.ytAutoSettings || { enabled: false, volume: 30 };
-      ytScrollSettings = settings.ytScrollSettings || { enabled: false, step: 5 };
-      twitchScrollSettings = settings.twitchScrollSettings || { enabled: false, step: 5 };
+      ytLiveSettings = settings.ytLiveSettings || { enabled: false, targetVolume: 60 };
+      ytAutoSettings = settings.ytAutoSettings || { enabled: true, volume: 30 };
+      ytScrollSettings = settings.ytScrollSettings || { enabled: true, step: 5 };
+      twitchScrollSettings = settings.twitchScrollSettings || { enabled: true, step: 5 };
       
       applyTheme(currentTheme);
       applyLanguage(currentLang);

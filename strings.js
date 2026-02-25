@@ -38,7 +38,7 @@ const strings = {
     // New Settings
     generalSettings: "一般設定",
     youtubeLiveSettings: "YouTube Live設定",
-    enableYoutubeLiveLowering: "YouTubeライブでは音量を下げる",
+    enableYoutubeLiveLowering: "YouTubeライブで音量を変更する",
     targetVolume: "目標音量",
     // Auto Volume Settings
     youtubeAutoSettings: "YouTube自動音量設定",
@@ -91,7 +91,7 @@ const strings = {
     // New Settings
     generalSettings: "General Settings",
     youtubeLiveSettings: "YouTube Live Settings",
-    enableYoutubeLiveLowering: "Lower volume on YouTube Live",
+    enableYoutubeLiveLowering: "Change volume on YouTube Live",
     targetVolume: "Target Volume",
     // Auto Volume Settings
     youtubeAutoSettings: "YouTube Auto Volume Settings",

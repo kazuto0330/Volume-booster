@@ -401,19 +401,19 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         const data = await chrome.storage.sync.get({ 
             boostSettings: {}, 
             accountSettings: {},
-            ytLiveSettings: { enabled: false, targetVolume: 100 },
-            ytAutoSettings: { enabled: false, volume: 30 },
-            ytScrollSettings: { enabled: false, step: 5 },
-            twitchScrollSettings: { enabled: false, step: 5 }
+            ytLiveSettings: { enabled: false, targetVolume: 60 },
+            ytAutoSettings: { enabled: true, volume: 30 },
+            ytScrollSettings: { enabled: true, step: 5 },
+            twitchScrollSettings: { enabled: true, step: 5 }
         });
         const settings = data.boostSettings || {};
         const accountSettings = data.accountSettings || {};
-        const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 100 };
-        const ytAuto = data.ytAutoSettings || { enabled: false, volume: 30 };
+        const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 60 };
+        const ytAuto = data.ytAutoSettings || { enabled: true, volume: 30 };
         
         // Update global scroll settings
-        scrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
-        twitchScrollSettings = data.twitchScrollSettings || { enabled: false, step: 5 };
+        scrollSettings = data.ytScrollSettings || { enabled: true, step: 5 };
+        twitchScrollSettings = data.twitchScrollSettings || { enabled: true, step: 5 };
         
         if (window.location.hostname.includes('youtube.com')) {
             ensureInjectedScript();
