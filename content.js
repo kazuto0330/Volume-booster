@@ -17,6 +17,22 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     if (audioContext) return;
     try {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Autoplay Policy 対策: suspended状態ならユーザー操作時にresumeする
+      if (audioContext.state === 'suspended') {
+        const resumeAudio = () => {
+          if (audioContext.state === 'suspended') {
+            audioContext.resume();
+          }
+          ['click', 'keydown', 'touchstart'].forEach(evt => 
+            document.removeEventListener(evt, resumeAudio, { capture: true })
+          );
+        };
+        ['click', 'keydown', 'touchstart'].forEach(evt => 
+          document.addEventListener(evt, resumeAudio, { once: true, capture: true })
+        );
+      }
+
       gainNode = audioContext.createGain();
       gainNode.connect(audioContext.destination);
       processAllMediaElements(); // 既存のメディア要素を接続

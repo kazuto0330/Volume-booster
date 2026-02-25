@@ -812,7 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="col-domain">${escapeHTML(domain)}</div>
         <div class="col-boost">
           <div class="boost-input-wrapper">
-             <input type="number" class="list-boost-input" min="0" max="600" value="${settings[domain]}" data-domain="${domain}">
+             <input type="number" class="list-boost-input" min="0" max="600" value="${settings[domain]}" data-domain="${escapeHTML(domain)}">
              <span>%</span>
           </div>
         </div>
@@ -822,10 +822,10 @@ document.addEventListener('DOMContentLoaded', () => {
               ${kebabIcon}
             </button>
             <div class="dropdown-menu">
-               <button class="dropdown-item edit-action" data-domain="${domain}">
+               <button class="dropdown-item edit-action" data-domain="${escapeHTML(domain)}">
                  <span>${strings[currentLang].editAction}</span>
                </button>
-               <button class="dropdown-item danger delete-action" data-domain="${domain}">
+               <button class="dropdown-item danger delete-action" data-domain="${escapeHTML(domain)}">
                  <span>${strings[currentLang].deleteAction}</span>
                </button>
             </div>
@@ -860,7 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="col-domain">${escapeHTML(accountName)}</div>
         <div class="col-boost">
           <div class="boost-input-wrapper">
-             <input type="number" class="list-boost-input" min="0" max="600" value="${settings[key]}" data-key="${key}">
+             <input type="number" class="list-boost-input" min="0" max="600" value="${settings[key]}" data-key="${escapeHTML(key)}">
              <span>%</span>
           </div>
         </div>
@@ -870,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
               ${kebabIcon}
             </button>
             <div class="dropdown-menu">
-               <button class="dropdown-item danger delete-action" data-key="${key}">
+               <button class="dropdown-item danger delete-action" data-key="${escapeHTML(key)}">
                  <span>${strings[currentLang].deleteAction}</span>
                </button>
             </div>
