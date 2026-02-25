@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Volume Booster",
-  "version": "1.2.0",
-  "description": "特定のWebサイトの音量を10%から600%までブーストします。サイトごとに設定を保存したり、現在のタブだけ一時的に変更したりできます。",
+  "name": "__MSG_appName__",
+  "version": "1.2.1",
+  "description": "__MSG_appDesc__",
+  "default_locale": "ja",
   "icons": {
     "16": "icon.png",
     "48": "icon.png",
@@ -20,21 +21,31 @@
   },
   "options_page": "options.html",
   "action": {
-    "default_title": "Volume Booster",
+    "default_title": "__MSG_appName__",
     "default_popup": "popup.html",
     "default_icon": "icon.png"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inject.js"],
-      "matches": ["*://*.youtube.com/*"]
+      "resources": [
+        "inject.js"
+      ],
+      "matches": [
+        "*://*.youtube.com/*"
+      ]
     }
   ]
 }
