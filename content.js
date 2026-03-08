@@ -423,18 +423,44 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
         // Apply YouTube Auto Volume (Player Volume)
         if (ytAuto.enabled && window.location.hostname.includes('youtube.com')) {
-             // Only apply if we haven't applied it for this "session" (url match) to avoid fighting user?
-             // Or simply apply on every navigation/load as requested ("when opening YouTube").
-             // Since URL_CHANGED calls this, it will apply on every video load.
+             // 内部APIを使用するためスクリプトの注入を保証
+             ensureInjectedScript();
              
-             // Send message to set volume.
-             // We use a slight delay to ensure the player is ready and to override any YouTube saved volume.
-             setTimeout(() => {
+             // 設定値をグローバルに保持（リスナー内で最新の値を参照するため）
+             window.__vbAutoVolumeValue = ytAuto.volume;
+
+             const setupAutoVolume = () => {
                  const video = document.querySelector('video');
-                 if (video) {
-                     video.volume = ytAuto.volume / 100;
+                 if (!video) return;
+
+                 // イベントリスナーの多重登録を防止
+                 if (!window.__vbAutoVolumeHandlerAttached) {
+                     window.__vbAutoVolumeHandlerAttached = true;
+                     window.__vbLastSetVolumeSrc = null;
+
+                     video.addEventListener('playing', () => {
+                         // 新しい動画ソース（新しい動画）の再生が始まった時のみ1度だけ実行
+                         if (window.__vbLastSetVolumeSrc !== video.currentSrc) {
+                             window.__vbLastSetVolumeSrc = video.currentSrc;
+                             
+                             // 再生開始直後のYouTube内部処理との競合を避けるため、ごくわずかに遅延させて確実性を上げる
+                             setTimeout(() => {
+                                 window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: window.__vbAutoVolumeValue }, '*');
+                             }, 100);
+                         }
+                     });
                  }
-             }, 1000); 
+
+                 // 拡張機能のロード時など、既に再生中の場合への対応
+                 if (!video.paused && video.readyState >= 3) {
+                     if (window.__vbLastSetVolumeSrc !== video.currentSrc) {
+                         window.__vbLastSetVolumeSrc = video.currentSrc;
+                         window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: window.__vbAutoVolumeValue }, '*');
+                     }
+                 }
+             };
+
+             setupAutoVolume();
         }
         
         let targetBoost = null;
