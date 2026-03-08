@@ -398,23 +398,22 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     async function initializeFromStorage() {
       const currentUrl = getNormalizedUrl();
       try {
-        const data = await chrome.storage.sync.get({ 
-            boostSettings: {}, 
+        const data = await chrome.storage.sync.get({
+            boostSettings: {},
             accountSettings: {},
             ytLiveSettings: { enabled: false, targetVolume: 60 },
-            ytAutoSettings: { enabled: true, volume: 30 },
-            ytScrollSettings: { enabled: true, step: 5 },
-            twitchScrollSettings: { enabled: true, step: 5 }
+            ytAutoSettings: { enabled: false, volume: 30 },
+            ytScrollSettings: { enabled: false, step: 5 },
+            twitchScrollSettings: { enabled: false, step: 5 }
         });
         const settings = data.boostSettings || {};
         const accountSettings = data.accountSettings || {};
         const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 60 };
-        const ytAuto = data.ytAutoSettings || { enabled: true, volume: 30 };
-        
+        const ytAuto = data.ytAutoSettings || { enabled: false, volume: 30 };
+
         // Update global scroll settings
-        scrollSettings = data.ytScrollSettings || { enabled: true, step: 5 };
-        twitchScrollSettings = data.twitchScrollSettings || { enabled: true, step: 5 };
-        
+        scrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
+        twitchScrollSettings = data.twitchScrollSettings || { enabled: false, step: 5 };        
         if (window.location.hostname.includes('youtube.com')) {
             ensureInjectedScript();
         }
