@@ -6,7 +6,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsList = document.getElementById('settings-list');
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const langToggleBtn = document.getElementById('lang-toggle-btn');
-  const resetSettingsBtn = document.getElementById('reset-settings-btn');
+  const resetMenuBtn = document.getElementById('reset-menu-btn');
+  const resetDropdown = document.getElementById('reset-dropdown');
+  const resetDomainsBtn = document.getElementById('reset-domains-btn');
+  const resetAccountsBtn = document.getElementById('reset-accounts-btn');
+  const resetFeaturesBtn = document.getElementById('reset-features-btn');
+  const resetAllBtn = document.getElementById('reset-all-btn');
   
   // Icons
   const iconSun = document.getElementById('icon-sun');
@@ -125,7 +130,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     themeToggleBtn.addEventListener('click', handleThemeToggle);
     langToggleBtn.addEventListener('click', handleLangToggle);
-    resetSettingsBtn.addEventListener('click', handleResetSettings);
+
+    // Reset Menu Listeners
+    resetMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetDropdown.classList.toggle('show');
+    });
+    resetDomainsBtn.addEventListener('click', handleResetDomains);
+    resetAccountsBtn.addEventListener('click', handleResetAccounts);
+    resetFeaturesBtn.addEventListener('click', handleResetFeatures);
+    resetAllBtn.addEventListener('click', handleResetAll);
 
     // Select text on click for number inputs
     boostInput.addEventListener('click', (e) => e.target.select());
@@ -555,15 +569,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function handleResetSettings() {
-    if (confirm(strings[currentLang].resetConfirm)) {
-      chrome.storage.sync.clear(() => {
-        if (chrome.runtime.lastError) {
-          console.error("Error clearing storage: ", chrome.runtime.lastError);
-        } else {
-          initialize(); 
-          chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
-        }
+  function handleResetDomains() {
+    if (confirm(strings[currentLang].resetDomainsConfirm)) {
+      chrome.storage.sync.set({ boostSettings: {} }, () => {
+        initialize();
+        chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+        closeAllDropdowns();
+      });
+    }
+  }
+
+  function handleResetAccounts() {
+    if (confirm(strings[currentLang].resetAccountsConfirm)) {
+      chrome.storage.sync.set({ accountSettings: {} }, () => {
+        initialize();
+        chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+        closeAllDropdowns();
+      });
+    }
+  }
+
+  function handleResetFeatures() {
+    if (confirm(strings[currentLang].resetFeaturesConfirm)) {
+      const defaultFeatures = {
+        ytLiveSettings: { enabled: false, targetVolume: 60 },
+        ytAutoSettings: { enabled: false, volume: 30 },
+        ytScrollSettings: { enabled: false, step: 5 },
+        twitchScrollSettings: { enabled: false, step: 5 }
+      };
+      chrome.storage.sync.set(defaultFeatures, () => {
+        initialize();
+        chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+        closeAllDropdowns();
+      });
+    }
+  }
+
+  function handleResetAll() {
+    if (confirm(strings[currentLang].resetAllConfirm)) {
+      chrome.storage.sync.get(['theme', 'language'], (currentSettings) => {
+        chrome.storage.sync.clear(() => {
+          // Restore theme and language
+          chrome.storage.sync.set({
+            theme: currentSettings.theme || 'dark',
+            language: currentSettings.language || 'ja'
+          }, () => {
+            initialize();
+            chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' });
+            closeAllDropdowns();
+          });
+        });
       });
     }
   }
@@ -727,7 +782,23 @@ document.addEventListener('DOMContentLoaded', () => {
     headerBoost.textContent = s.headerBoost;
     headerAction.textContent = s.headerAction;
     
-    resetSettingsBtn.textContent = s.resetAllSettings;
+    // Reset Settings Localization
+    const labelResetSettings = document.getElementById('labelResetSettings');
+    if (labelResetSettings) labelResetSettings.textContent = s.resetSettings;
+    
+    if (resetMenuBtn) resetMenuBtn.textContent = s.resetSettings;
+    
+    const textResetDomains = document.getElementById('textResetDomains');
+    if (textResetDomains) textResetDomains.textContent = s.resetDomains;
+    
+    const textResetAccounts = document.getElementById('textResetAccounts');
+    if (textResetAccounts) textResetAccounts.textContent = s.resetAccounts;
+    
+    const textResetFeatures = document.getElementById('textResetFeatures');
+    if (textResetFeatures) textResetFeatures.textContent = s.resetFeatures;
+    
+    const textResetAll = document.getElementById('textResetAll');
+    if (textResetAll) textResetAll.textContent = s.resetAllSettings;
 
     // New Sections Localization
     const generalSettingsHeader = document.getElementById('generalSettingsHeader');
