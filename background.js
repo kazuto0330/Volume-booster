@@ -1,5 +1,12 @@
 // background.js
 
+// Listen for installation
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: 'welcome.html' });
+  }
+});
+
 // Listen for messages from other parts of the extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // This listener is required to handle messages from popup.js or options.js

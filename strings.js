@@ -1,5 +1,22 @@
 const strings = {
   ja: {
+    // Welcome Page
+    welcomeTitle: "音量ブースターへようこそ！",
+    welcomeSubtitle: "インストールありがとうございます。基本的な使い方をご紹介します。",
+    welcomeSection1Title: "1. メイン機能：音量ブースト",
+    welcomeSection1Desc1: "ツールバーにある拡張機能のアイコンをクリックします。",
+    welcomeSection1Desc2: "スライダーを動かして、音量を最大600%までブーストできます！",
+    welcomeSection1Desc3: "設定はドメインごとに自動保存され、次回開いた時も適用されます。",
+    welcomeSection2Title: "2. その他の便利機能（オプション）",
+    welcomeSection2Intro: "この拡張機能には、他にも便利な機能がたくさんあります。拡張機能アイコンを右クリックして「オプション」から設定できます。",
+    welcomeFeature1Title: "YouTube Live音量調整",
+    welcomeFeature1Desc: "YouTube Liveを開いた時だけ、自動的に指定した音量に変更します。",
+    welcomeFeature2Title: "YouTube自動音量",
+    welcomeFeature2Desc: "YouTubeを開いた時、常に決まった音量で再生を開始します。",
+    welcomeFeature3Title: "マウスホイールで音量調整",
+    welcomeFeature3Desc: "YouTubeやTwitchの動画プレイヤー上でマウスホイールを回すと、直感的に音量を調整できます。",
+    getStartedBtn: "使い始める（閉じる）",
+    openOptionsBtn: "設定画面を見てみる",
     // General
     appName: "音量ブースター",
     manageSettings: "すべての設定を管理",
@@ -61,6 +78,23 @@ const strings = {
     scrollStep: "ホイール1目盛りの変化量 (%)"
   },
   en: {
+    // Welcome Page
+    welcomeTitle: "Welcome to Volume Booster!",
+    welcomeSubtitle: "Thank you for installing. Here is a quick guide on how to use it.",
+    welcomeSection1Title: "1. Main Feature: Volume Boost",
+    welcomeSection1Desc1: "Click the extension icon in your browser toolbar.",
+    welcomeSection1Desc2: "Use the slider to boost the volume up to 600%!",
+    welcomeSection1Desc3: "Settings are automatically saved per domain and applied next time.",
+    welcomeSection2Title: "2. Other Awesome Features (Options)",
+    welcomeSection2Intro: "This extension has more useful features. Right-click the extension icon and select 'Options' to enable them.",
+    welcomeFeature1Title: "YouTube Live Volume Control",
+    welcomeFeature1Desc: "Automatically set a specific volume only when you open YouTube Live streams.",
+    welcomeFeature2Title: "YouTube Auto Volume",
+    welcomeFeature2Desc: "Always start videos at your preferred volume when you open YouTube.",
+    welcomeFeature3Title: "Mouse Wheel Volume Control",
+    welcomeFeature3Desc: "Intuitively adjust the volume by scrolling your mouse wheel on YouTube or Twitch players.",
+    getStartedBtn: "Get Started (Close)",
+    openOptionsBtn: "Go to Settings",
     // General
     appName: "Volume Booster",
     manageSettings: "Manage All Settings",
