@@ -31,6 +31,8 @@ const strings = {
     resetTemp: "現在のタブの設定をリセット",
     noSettingsToReset: "すべてデフォルト設定です",
     statusUnsupported: "このページでは使用できません。",
+    expandSettings: "詳細設定を表示",
+    collapseSettings: "詳細設定を非表示",
     // Options
     optionsTitle: "音量ブースター設定",
     accountSettings: "アカウント別設定",
@@ -109,6 +111,8 @@ const strings = {
     resetTemp: "Reset Current Tab Setting",
     noSettingsToReset: "All settings are default",
     statusUnsupported: "Not available on this page.",
+    expandSettings: "Show Advanced Settings",
+    collapseSettings: "Hide Advanced Settings",
     // Tooltips
     tooltipDomain: "Set volume for this entire site (Saved)",
     tooltipAccount: "Set volume for this account (Saved)",

@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tempActiveIndicator = document.getElementById('temp-active');
 
   const optionsBtn = document.getElementById('options-btn');
+  const toggleExpandBtn = document.getElementById('toggle-expand-btn');
+  const advancedSettingsContainer = document.getElementById('advanced-settings-container');
 
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const languageSelectorContainer = document.getElementById('language-selector-container');
@@ -63,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeLanguageSelector(); // Create and populate the language dropdown
     initializeResetMenu(); // Create reset menu items
 
-    chrome.storage.sync.get(['theme', 'language'], (settings) => {
+    chrome.storage.sync.get(['theme', 'language', 'isExpanded'], (settings) => {
       // Determine initial theme
       currentTheme = settings.theme || 'dark'; // Default to dark
       applyTheme(currentTheme);
@@ -85,6 +87,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // languageSelect.value = currentLang; // No longer select element
       applyLanguage(currentLang);
       initializePopupContent();
+
+      // Determine initial advanced settings expanded state
+      const isExpanded = settings.isExpanded || false;
+      if (isExpanded) {
+        advancedSettingsContainer.classList.add('no-transition');
+        advancedSettingsContainer.classList.add('expanded');
+        toggleExpandBtn.classList.add('expanded');
+      } else {
+        advancedSettingsContainer.style.maxHeight = '0px';
+      }
     });
 
     addEventListeners();
@@ -341,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     optionsBtn.addEventListener('click', () => {
       chrome.runtime.openOptionsPage();
     });
+    toggleExpandBtn.addEventListener('click', toggleAdvancedSettings);
 
     // Listener for updates from other parts of the extension
     chrome.runtime.onMessage.addListener((request) => {
@@ -491,6 +504,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateActiveIndicators() {
+      // Update accordion height if it's expanded
+      updateAccordionHeight();
+
       domainActiveIndicator.style.display = 'none';
       accountActiveIndicator.style.display = 'none';
       tempActiveIndicator.style.display = 'none';
@@ -555,6 +571,40 @@ document.addEventListener('DOMContentLoaded', () => {
               tempActiveIndicator.style.display = 'inline-block';
           }
       }
+  }
+
+  function toggleAdvancedSettings() {
+    const isExpanded = advancedSettingsContainer.classList.contains('expanded');
+    if (isExpanded) {
+      // Collapse
+      advancedSettingsContainer.style.maxHeight = '0px';
+      advancedSettingsContainer.classList.remove('expanded');
+      toggleExpandBtn.classList.remove('expanded');
+      chrome.storage.sync.set({ isExpanded: false });
+      toggleExpandBtn.title = strings[currentLang].expandSettings;
+    } else {
+      // Expand
+      advancedSettingsContainer.classList.add('expanded');
+      advancedSettingsContainer.style.maxHeight = advancedSettingsContainer.scrollHeight + 'px';
+      toggleExpandBtn.classList.add('expanded');
+      chrome.storage.sync.set({ isExpanded: true });
+      toggleExpandBtn.title = strings[currentLang].collapseSettings;
+    }
+  }
+
+  function updateAccordionHeight() {
+    if (advancedSettingsContainer.classList.contains('expanded')) {
+      advancedSettingsContainer.style.maxHeight = advancedSettingsContainer.scrollHeight + 'px';
+      
+      // Remove no-transition class if present so subsequent transitions work smoothly
+      if (advancedSettingsContainer.classList.contains('no-transition')) {
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            advancedSettingsContainer.classList.remove('no-transition');
+          }, 50);
+        });
+      }
+    }
   }
 
   function handleThemeToggle() {
@@ -660,6 +710,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (accountResetItem) accountResetItem.textContent = strings[lang].resetAccount;
     if (tempResetItem) tempResetItem.textContent = strings[lang].resetTemp;
     if (noSettingsItem) noSettingsItem.textContent = strings[lang].noSettingsToReset;
+
+    if (toggleExpandBtn) {
+      const isExpanded = advancedSettingsContainer.classList.contains('expanded');
+      toggleExpandBtn.title = isExpanded ? strings[lang].collapseSettings : strings[lang].expandSettings;
+    }
   }
 
   // --- Run ---

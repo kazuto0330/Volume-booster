@@ -119,17 +119,31 @@
     }
     /* Footer Button Styles */
     .footer {
-      margin-top: 10px;
+      margin-top: 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      height: 36px;
+      height: 38px;
     }
     
-    .settings-controls {
+    .footer-left {
+      display: flex;
+      align-items: center;
+      width: 80px;
+    }
+    
+    .footer-center {
+      display: flex;
+      justify-content: center;
+      flex-grow: 1;
+    }
+    
+    .footer-right {
       display: flex;
       gap: 4px;
       align-items: center;
+      justify-content: flex-end;
+      width: 104px;
     }
 
     .icon-btn {
@@ -294,43 +308,64 @@
     .slider-container-wrapper {
         position: relative;
     }
+    
+    /* Advanced Settings Accordion */
+    .advanced-settings-container {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                  opacity 0.25s ease-out,
+                  margin-bottom 0.3s ease;
+      margin-bottom: 0;
+    }
+    
+    .advanced-settings-container.expanded {
+      opacity: 1;
+      margin-bottom: 10px;
+    }
+
+    .no-transition {
+      transition: none !important;
+    }
+    
+    #toggle-expand-btn {
+      width: 52px;
+      height: 28px;
+      border-radius: 14px;
+      background-color: var(--input-bg-color);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--secondary-text-color);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px var(--shadow-color);
+    }
+    
+    #toggle-expand-btn:hover {
+      background-color: var(--accent-color);
+      color: #fff;
+      border-color: var(--accent-color);
+      box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
+    }
+    
+    #toggle-expand-btn svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      stroke: currentColor;
+    }
+    
+    #toggle-expand-btn.expanded svg {
+      transform: rotate(180deg);
+    }
   </style>
 </head>
 <body>
   <h1 id="appName"></h1>
   <div id="current-domain-display"></div>
-
-  <div id="control-group-domain" class="control-group">
-    <div class="control-header">
-        <div style="display:flex; align-items:center;">
-            <div id="domain-title" class="control-group-title">Site-wide (saved)</div>
-            <span id="domain-active" class="active-indicator">ACTIVE</span>
-        </div>
-    </div>
-    <div class="controls-container slider-container-wrapper">
-      <div id="tooltip-domain" class="slider-tooltip"></div>
-      <input type="range" id="domain-boost-slider" min="0" max="600" value="100">
-      <div class="number-input-wrapper">
-        <input type="number" id="domain-boost-input" min="0" max="600" value="100">
-      </div>
-    </div>
-  </div>
-
-  <div id="control-group-account" class="control-group" style="display: none;">
-    <div class="control-header">
-         <div style="display:flex; align-items:center;">
-            <div id="account-title" class="control-group-title">Account (saved)</div>
-            <span id="account-active" class="active-indicator">ACTIVE</span>
-         </div>
-    </div>
-    <div class="controls-container slider-container-wrapper">
-      <div id="tooltip-account" class="slider-tooltip"></div>
-      <input type="range" id="account-boost-slider" min="0" max="600" value="100">
-      <div class="number-input-wrapper">
-        <input type="number" id="account-boost-input" min="0" max="600" value="100">
-      </div>
-    </div>
-  </div>
 
   <div id="control-group-temp" class="control-group">
     <div class="control-header">
@@ -348,18 +383,63 @@
     </div>
   </div>
 
-  <div class="footer">
-    <div id="language-selector-container" class="menu-container">
-      <!-- Language button and menu will be inserted here by JavaScript -->
+  <div id="advanced-settings-container" class="advanced-settings-container">
+    <div id="control-group-domain" class="control-group">
+      <div class="control-header">
+          <div style="display:flex; align-items:center;">
+              <div id="domain-title" class="control-group-title">Site-wide (saved)</div>
+              <span id="domain-active" class="active-indicator">ACTIVE</span>
+          </div>
+      </div>
+      <div class="controls-container slider-container-wrapper">
+        <div id="tooltip-domain" class="slider-tooltip"></div>
+        <input type="range" id="domain-boost-slider" min="0" max="600" value="100">
+        <div class="number-input-wrapper">
+          <input type="number" id="domain-boost-input" min="0" max="600" value="100">
+        </div>
+      </div>
     </div>
-    <div class="settings-controls">
+
+    <div id="control-group-account" class="control-group" style="display: none;">
+      <div class="control-header">
+           <div style="display:flex; align-items:center;">
+              <div id="account-title" class="control-group-title">Account (saved)</div>
+              <span id="account-active" class="active-indicator">ACTIVE</span>
+           </div>
+      </div>
+      <div class="controls-container slider-container-wrapper">
+        <div id="tooltip-account" class="slider-tooltip"></div>
+        <input type="range" id="account-boost-slider" min="0" max="600" value="100">
+        <div class="number-input-wrapper">
+          <input type="number" id="account-boost-input" min="0" max="600" value="100">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-left">
       <div class="menu-container">
           <button id="global-reset-btn" class="icon-btn" title="Reset Settings">
             <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
           </button>
-          <div id="reset-menu" class="popup-menu">
+          <div id="reset-menu" class="popup-menu" style="left: 0; right: auto;">
               <!-- Menu items injected by JS -->
           </div>
+      </div>
+    </div>
+    
+    <div class="footer-center">
+      <button id="toggle-expand-btn" class="icon-btn" title="詳細設定を表示">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="footer-right">
+      <div id="language-selector-container" class="menu-container">
+        <!-- Language button and menu will be inserted here by JavaScript -->
       </div>
       <button id="theme-toggle-btn" class="icon-btn">
         <!-- Default Sun Icon -->
