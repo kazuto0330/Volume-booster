@@ -77,7 +77,12 @@ const strings = {
     twitchScrollSettings: "Twitch",
     enableYoutubeScroll: "YouTubeでホイール音量調整を有効にする",
     enableTwitchScroll: "Twitchでホイール音量調整を有効にする",
-    scrollStep: "ホイール1目盛りの変化量 (%)"
+    scrollStep: "ホイール1目盛りの変化量 (%)",
+    // Options / General
+    labelTheme: "テーマ",
+    labelLanguage: "言語",
+    tooltipTheme: "テーマを切り替える",
+    tooltipLanguage: "言語を切り替える"
   },
   en: {
     // Welcome Page
@@ -157,6 +162,11 @@ const strings = {
     twitchScrollSettings: "Twitch",
     enableYoutubeScroll: "Adjust volume via mouse wheel on YouTube",
     enableTwitchScroll: "Adjust volume via mouse wheel on Twitch",
-    scrollStep: "Volume change per step (%)"
+    scrollStep: "Volume change per step (%)",
+    // Options / General
+    labelTheme: "Theme",
+    labelLanguage: "Language",
+    tooltipTheme: "Toggle Theme",
+    tooltipLanguage: "Switch Language"
   }
 };

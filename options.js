@@ -781,6 +781,16 @@ document.addEventListener('DOMContentLoaded', () => {
     headerDomain.textContent = s.headerDomain;
     headerBoost.textContent = s.headerBoost;
     headerAction.textContent = s.headerAction;
+
+    // Theme & Language Localization
+    const labelTheme = document.getElementById('labelTheme');
+    if (labelTheme) labelTheme.textContent = s.labelTheme;
+    
+    const labelLanguage = document.getElementById('labelLanguage');
+    if (labelLanguage) labelLanguage.textContent = s.labelLanguage;
+    
+    if (themeToggleBtn) themeToggleBtn.title = s.tooltipTheme;
+    if (langToggleBtn) langToggleBtn.title = s.tooltipLanguage;
     
     // Reset Settings Localization
     const labelResetSettings = document.getElementById('labelResetSettings');

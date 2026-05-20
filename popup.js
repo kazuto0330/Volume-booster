@@ -711,6 +711,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tempResetItem) tempResetItem.textContent = strings[lang].resetTemp;
     if (noSettingsItem) noSettingsItem.textContent = strings[lang].noSettingsToReset;
 
+    if (themeToggleBtn) {
+      themeToggleBtn.title = strings[lang].tooltipTheme;
+    }
+    if (languageBtn) {
+      languageBtn.title = strings[lang].tooltipLanguage;
+    }
+
     if (toggleExpandBtn) {
       const isExpanded = advancedSettingsContainer.classList.contains('expanded');
       toggleExpandBtn.title = isExpanded ? strings[lang].collapseSettings : strings[lang].expandSettings;
