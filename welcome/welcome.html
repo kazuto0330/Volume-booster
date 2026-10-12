@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title id="welcomeTitle-tab">Volume Booster Welcome</title>
+  <link rel="stylesheet" href="welcome.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 id="welcomeTitle"></h1>
+      <p id="welcomeSubtitle"></p>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title" id="welcomeSection1Title"></h2>
+      <ul class="feature-list">
+        <li id="welcomeSection1Desc1"></li>
+        <li id="welcomeSection1Desc2"></li>
+        <li id="welcomeSection1Desc3"></li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title" id="welcomeSection2Title"></h2>
+      <p style="margin-bottom: 20px; font-size: 16px; line-height: 1.5;" id="welcomeSection2Intro"></p>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3 id="welcomeFeature1Title"></h3>
+          <p id="welcomeFeature1Desc"></p>
+        </div>
+        <div class="feature-card">
+          <h3 id="welcomeFeature2Title"></h3>
+          <p id="welcomeFeature2Desc"></p>
+        </div>
+        <div class="feature-card">
+          <h3 id="welcomeFeature3Title"></h3>
+          <p id="welcomeFeature3Desc"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-container">
+      <button class="btn" id="getStartedBtn"></button>
+      <button class="btn btn-secondary" id="openOptionsBtn"></button>
+    </div>
+  </div>
+
+  <script src="../common/utils.js"></script>
+  <script src="../common/strings.js"></script>
+  <script src="welcome.js"></script>
+</body>
+</html>

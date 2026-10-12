@@ -1,9 +1,10 @@
 // background.js
+importScripts('common/utils.js');
 
 // Listen for installation
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    chrome.tabs.create({ url: 'welcome.html' });
+    chrome.tabs.create({ url: 'welcome/welcome.html' });
   }
 });
 
@@ -22,10 +23,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   const isUrlChanged = changeInfo.url !== undefined;
 
   if ((isComplete || isUrlChanged) && tab.url && tab.url.startsWith('http')) {
-    let url = tab.url;
-    url = url.replace(/^https?:\/\//, '');
-    url = url.replace(/^www\./, '');
-    const normalizedUrl = url;
+    const normalizedUrl = normalizeUrl(tab.url);
 
     // Try to notify existing content script first
     chrome.tabs.sendMessage(tabId, { type: 'URL_CHANGED', url: tab.url }, (response) => {
@@ -38,38 +36,23 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 function checkAndInject(tabId, normalizedUrl) {
-    // Get the saved settings
-    chrome.storage.sync.get({ boostSettings: {} }, (data) => {
-      const settings = data.boostSettings || {};
-      
-      // Check if any setting matches the current URL
-      let shouldInject = false;
-      for (const key in settings) {
-         let isMatch = false;
-         if (normalizedUrl.startsWith(key)) {
-            if (normalizedUrl.length === key.length) {
-                isMatch = true;
-            } else {
-                const nextChar = normalizedUrl[key.length];
-                if (['/', '?', '#'].includes(nextChar)) isMatch = true;
-            }
-         }
-         if (isMatch) {
-           shouldInject = true;
-           break;
-         }
-      }
+  // Get the saved settings
+  chrome.storage.sync.get({ boostSettings: {} }, (data) => {
+    const settings = data.boostSettings || {};
+    
+    // Check if any setting matches the current URL
+    const matchedKey = findBestMatchingKey(normalizedUrl, settings);
 
-      if (shouldInject) {
-        // Inject the content script into the tab
-        chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          files: ['content.js']
-        }, () => {
-          if (chrome.runtime.lastError) {
-              console.error(`Script injection failed: ${chrome.runtime.lastError.message}`);
-          }
-        });
-      }
-    });
+    if (matchedKey !== null) {
+      // Inject utils.js and content.js into the tab
+      chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['common/utils.js', 'content/content.js']
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error(`Script injection failed: ${chrome.runtime.lastError.message}`);
+        }
+      });
+    }
+  });
 }

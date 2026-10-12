@@ -19,10 +19,10 @@
   "background": {
     "service_worker": "background.js"
   },
-  "options_page": "options.html",
+  "options_page": "options/options.html",
   "action": {
     "default_title": "__MSG_appName__",
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": "icon.png"
   },
   "content_scripts": [
@@ -31,17 +31,18 @@
         "<all_urls>"
       ],
       "js": [
-        "content.js"
+        "common/utils.js",
+        "content/content.js"
       ],
       "css": [
-        "styles.css"
+        "content/content.css"
       ]
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
-        "inject.js"
+        "content/inject.js"
       ],
       "matches": [
         "*://*.youtube.com/*"

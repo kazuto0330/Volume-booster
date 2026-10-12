@@ -130,20 +130,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     }
   });
 
-  // URLの正規化（プロトコルとwww.を除去）
+  // URLの正規化（utils.js の normalizeUrl を利用）
   function getNormalizedUrl() {
-    let url = window.location.href;
-    url = url.replace(/^https?:\/\//, '');
-    url = url.replace(/^www\./, '');
-    return url;
-  }
-
-  // キーがURLにマッチするか判定（ドメイン/パス境界を考慮）
-  function isMatch(key, url) {
-    if (!url.startsWith(key)) return false;
-    if (url.length === key.length) return true;
-    const nextChar = url[key.length];
-    return ['/', '?', '#'].includes(nextChar);
+    return normalizeUrl(window.location.href);
   }
 
   // YouTube Account Info via oEmbed
@@ -170,7 +159,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
         const script = document.createElement('script');
         script.id = 'volume-booster-inject';
-        script.src = chrome.runtime.getURL('inject.js');
+        script.src = chrome.runtime.getURL('content/inject.js');
         script.onload = function() {
             this.remove(); 
         };
@@ -222,13 +211,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         return null;
     }
   
-    // YouTube用: ライブ状態の変化を監視する (Re-run check on navigation/update)
-    let liveObserver = null;
-    function startLiveObserver(settings, ytSettings) {
-        if (liveObserver) liveObserver.disconnect();
-        // Observer logic removed/simplified as we rely on URL_CHANGED
-    }
-
     let overlayTimeout = null;
 
     function showVolumeOverlay(volume, container) {
@@ -517,17 +499,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
         // 3. Domain Match Logic (Low Priority - only if no account setting found)
         if (targetBoost === null) {
-            let maxLen = -1;
-            for (const key in settings) {
-                if (isMatch(key, currentUrl)) {
-                    if (key.length > maxLen) {
-                        maxLen = key.length;
-                        matchKey = key;
-                        source = 'domain';
-                    }
-                }
-            }
+            matchKey = findBestMatchingKey(currentUrl, settings);
             if (matchKey) {
+                source = 'domain';
                 targetBoost = settings[matchKey];
             }
         }
