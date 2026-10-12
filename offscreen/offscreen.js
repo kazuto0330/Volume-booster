@@ -21,6 +21,16 @@ async function cleanupTabAudio(tabId) {
         }
       });
     }
+    if (session.source) {
+      try {
+        session.source.disconnect();
+      } catch (e) {}
+    }
+    if (session.gainNode) {
+      try {
+        session.gainNode.disconnect();
+      } catch (e) {}
+    }
     if (session.audioCtx && session.audioCtx.state !== 'closed') {
       await session.audioCtx.close();
     }
@@ -80,11 +90,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           };
         }
 
-        activeTabAudioMap.set(tabId, { stream, audioCtx, gainNode });
+        // 重要: source への参照を保持して GC (ガベージコレクション) による無音化を防止
+        activeTabAudioMap.set(tabId, { stream, audioCtx, source, gainNode });
         sendResponse({ success: true });
       } catch (error) {
-        console.error('Volume Booster Offscreen: Failed to start capture for tab', tabId, error);
-        sendResponse({ success: false, error: error.message });
+        const errorDetail = `${error.name || 'Error'}: ${error.message || error}`;
+        console.warn('Volume Booster Offscreen: Capture could not start for tab', tabId, errorDetail);
+        sendResponse({ success: false, error: errorDetail });
       }
     })();
     return true; // 非同期レスポンスを維持

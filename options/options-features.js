@@ -164,7 +164,7 @@ const OptionsFeatures = {
     event.preventDefault();
     const currentValue = parseInt(slider.value, 10);
     const step = event.deltaY < 0 ? (currentValue < 100 ? 10 : 20) : (currentValue <= 100 ? -10 : -20);
-    const newValue = clamp(currentValue + step, 0, 600);
+    const newValue = clamp(currentValue + step, 10, 600);
 
     if (newValue !== currentValue) {
       slider.value = newValue;

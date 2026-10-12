@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
       step = currentValue <= 100 ? -10 : -20;
     }
 
-    const newValue = clamp(currentValue + step, 0, 600);
+    const newValue = clamp(currentValue + step, 10, 600);
     if (newValue !== currentValue) {
       handler(newValue);
     }
@@ -369,17 +369,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyBoostToTab(boost) {
     if (!currentTab || !currentTab.id) return;
 
-    // 1. バックグラウンドへ音量を送信（自動判定: >100%なら自動Tab Capture、==100%なら自動停止）
-    chrome.runtime.sendMessage({
-      type: 'UPDATE_TAB_VOLUME',
-      tabId: currentTab.id,
-      volume: boost
-    });
-
-    // 2. content.js へ現在の設定を通知（キャッシュやUI同期用）
+    // content.js へ音量更新を送信（Content Script 側で DOM または必要時のみ Tab Capture を自律制御）
     chrome.tabs.sendMessage(currentTab.id, { type: 'UPDATE_VOLUME', boost: boost }, () => {
       if (chrome.runtime.lastError) {
-        // Content script が存在しないタブ（chrome://等）は無視
+        // Content script が未注入の保護ページ（chrome:// 等）は無視
       }
     });
   }
@@ -390,7 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function sanitizeBoostValue(value) {
-    return clamp(parseInt(value, 10) || 100, 0, 600);
+    const num = parseInt(value, 10);
+    return clamp(isNaN(num) ? 100 : num, 10, 600);
   }
 
   function enableControls(enabled) {

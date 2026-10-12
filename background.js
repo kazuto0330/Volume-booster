@@ -84,8 +84,8 @@ async function updateTabVolumeAuto(tabId, volume) {
 
   const isCapturing = capturedTabs.has(tabId);
 
-  if (volume > 100) {
-    // 100%超: 自動でキャプチャを起動または音量更新
+  if (volume !== 100) {
+    // 100%以外: 自動でキャプチャを起動または音量更新（10%〜600%）
     if (!isCapturing) {
       try {
         await setupOffscreenDocument();
@@ -124,7 +124,7 @@ async function updateTabVolumeAuto(tabId, volume) {
       return true;
     }
   } else {
-    // 100%以下（通常音量）: キャプチャを自動停止して通常再生へ戻す
+    // 100%（通常音量）: キャプチャを自動停止して通常再生へ戻す
     if (isCapturing) {
       capturedTabs.delete(tabId);
       sendToOffscreen({
@@ -170,6 +170,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success });
     });
     return true;
+  }
+
+  if (request.type === 'STOP_TAB_CAPTURE_IF_ANY') {
+    const tabId = request.tabId || (sender.tab ? sender.tab.id : null);
+    if (tabId && capturedTabs.has(tabId)) {
+      capturedTabs.delete(tabId);
+      sendToOffscreen({
+        action: 'STOP_CAPTURE',
+        tabId: tabId,
+      });
+      closeOffscreenDocumentIfIdle();
+    }
+    sendResponse({ success: true });
+    return false;
   }
 
   if (request.type === 'GET_TAB_CAPTURE_STATUS') {

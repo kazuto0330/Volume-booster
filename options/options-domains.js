@@ -151,7 +151,7 @@ const OptionsDomains = {
       alert(strings[lang].alertDomain);
       return;
     }
-    if (isNaN(boost) || boost < 0 || boost > 600) {
+    if (isNaN(boost) || boost < 10 || boost > 600) {
       alert(strings[lang].alertBoost);
       return;
     }
@@ -211,7 +211,7 @@ const OptionsDomains = {
         <div class="col-domain">${escapeHTML(domain)}</div>
         <div class="col-boost">
           <div class="boost-input-wrapper">
-             <input type="number" class="list-boost-input" min="0" max="600" value="${settings[domain]}" data-domain="${escapeHTML(domain)}">
+             <input type="number" class="list-boost-input" min="10" max="600" value="${settings[domain]}" data-domain="${escapeHTML(domain)}">
              <span>%</span>
           </div>
         </div>

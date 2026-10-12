@@ -4,12 +4,208 @@
 if (typeof window.volumeBoosterAttached === 'undefined') {
   window.volumeBoosterAttached = true;
 
+  let audioContext = null;
+  let gainNode = null;
+  const mediaElements = new WeakMap();
   let domObserver = null;
   let currentBoost = 100; // 現在のブースト値を保持
   let currentAccountName = null; // 現在のYouTubeアカウント名を保持
   let activeSource = 'default'; // 現在適用されている設定のソース ('live', 'account', 'domain', 'default')
 
-  // 指定されたブースト率を保持
+  // メディア要素から現在の有効なソースURLを取得
+  function getMediaElementSourceUrl(element) {
+    if (!element) return '';
+    let src = element.currentSrc || element.src;
+    if (!src) {
+      const sourceEl = element.querySelector('source');
+      if (sourceEl) src = sourceEl.src;
+    }
+    return src || '';
+  }
+
+  // メディア要素がCORS制限によって無音化するリスクがあるかを汎用判定
+  function isMediaElementCorsRestricted(element) {
+    if (!element) return false;
+
+    // srcObject (MediaStream / MediaSource) は同一コンテキストのためCORS制限なし
+    if (element.srcObject) {
+      return false;
+    }
+
+    const src = getMediaElementSourceUrl(element);
+    if (!src) return false;
+
+    // blob: や data: は同一コンテキストのためCORS制限なし
+    if (src.startsWith('blob:') || src.startsWith('data:')) {
+      return false;
+    }
+
+    try {
+      const mediaUrl = new URL(src, window.location.href);
+      // 同一オリジンであればCORS制限なし
+      if (mediaUrl.origin === window.location.origin) {
+        return false;
+      }
+      // クロスオリジンかつ crossOrigin 属性が未設定の場合、createMediaElementSource で無音化する
+      if (!element.crossOrigin) {
+        return true;
+      }
+    } catch (e) {
+      return false;
+    }
+    return false;
+  }
+
+  // メディア要素がWeb Audio API (DOM) に安全に接続可能かを判定
+  function isMediaElementSafeForDOM(element) {
+    if (!element) return false;
+
+    // 1. CORS制限対象と確定している要素はDOM接続不可
+    if (isMediaElementCorsRestricted(element)) {
+      return false;
+    }
+
+    // 2. srcObject があれば確実に安全 (MSE / WebRTC)
+    if (element.srcObject) {
+      return true;
+    }
+
+    const src = getMediaElementSourceUrl(element);
+
+    // 3. 有効なソースが存在する場合:
+    if (src) {
+      // blob: や data: は同一コンテキストのため安全
+      if (src.startsWith('blob:') || src.startsWith('data:')) {
+        return true;
+      }
+      try {
+        const mediaUrl = new URL(src, window.location.href);
+        if (mediaUrl.origin === window.location.origin || element.crossOrigin) {
+          return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    // 4. ソースURLが未取得(空)の場合:
+    // すでに再生中またはメタデータ読み込み済みであれば、MSEや内部バッファで安全に再生中と判定
+    if (element.readyState >= 1 || element.currentTime > 0 || !element.paused) {
+      return true;
+    }
+
+    // まだ全くロードが始まっていない初期要素は保留（後からクロスオリジンURLが来る可能性があるため）
+    return false;
+  }
+
+  // ページがDOM経由のWeb Audio APIで処理可能かを汎用自動判定
+  function canHandleViaDOM() {
+    const elements = document.querySelectorAll('video, audio');
+    if (elements.length > 0) {
+      for (const el of elements) {
+        if (isMediaElementCorsRestricted(el)) {
+          return false; // CORS制限あり（Twitchクリップ、X動画等） -> Tab Captureへ
+        }
+      }
+      return true; // CORS制限なし（YouTube、Twitch本配信等） -> DOMモード
+    }
+    // メディア要素がまだDOMにない初期状態等は、DOMモードを前提として待機
+    return true;
+  }
+
+  // Web Audio API のセットアップ
+  function setupAudioContext() {
+    if (audioContext) return;
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Autoplay Policy 対策: suspended 状態ならユーザー操作時に resume する
+      if (audioContext.state === 'suspended') {
+        const resumeAudio = () => {
+          if (audioContext && audioContext.state === 'suspended') {
+            audioContext.resume();
+          }
+          ['click', 'keydown', 'touchstart'].forEach(evt => 
+            document.removeEventListener(evt, resumeAudio, { capture: true })
+          );
+        };
+        ['click', 'keydown', 'touchstart'].forEach(evt => 
+          document.addEventListener(evt, resumeAudio, { once: true, capture: true })
+        );
+      }
+
+      gainNode = audioContext.createGain();
+      gainNode.connect(audioContext.destination);
+      processAllMediaElements();
+    } catch (e) {
+      console.error("Volume Booster: Could not create AudioContext.", e);
+    }
+  }
+
+  // メディア要素をオーディオグラフに接続
+  function processMediaElement(element) {
+    if (!element || mediaElements.has(element)) return;
+
+    // CORS制限のある要素は無音化を防ぐためDOM接続を行わず、Tab Captureへフォールバック
+    if (isMediaElementCorsRestricted(element)) {
+      if (currentBoost !== 100 && window.top === window) {
+        chrome.runtime.sendMessage({
+          type: 'UPDATE_TAB_VOLUME',
+          volume: currentBoost
+        }).catch(() => {});
+      }
+      return;
+    }
+
+    // 安全性が確認できていない要素（未ロード・src未確定など）は、createMediaElementSourceを呼ばずに保留
+    if (!isMediaElementSafeForDOM(element)) {
+      const handleSourceReady = () => {
+        ['loadstart', 'loadedmetadata', 'canplay', 'playing', 'loadeddata'].forEach(evt => {
+          element.removeEventListener(evt, handleSourceReady);
+        });
+        if (isMediaElementCorsRestricted(element)) {
+          if (currentBoost !== 100 && window.top === window) {
+            chrome.runtime.sendMessage({
+              type: 'UPDATE_TAB_VOLUME',
+              volume: currentBoost
+            }).catch(() => {});
+          }
+        } else if (isMediaElementSafeForDOM(element)) {
+          if (!gainNode && currentBoost !== 100) setupAudioContext();
+          else if (gainNode) processMediaElement(element);
+        }
+      };
+
+      ['loadstart', 'loadedmetadata', 'canplay', 'playing', 'loadeddata'].forEach(evt => {
+        element.addEventListener(evt, handleSourceReady, { once: true });
+      });
+      return;
+    }
+
+    // ここまで来た要素は確実に isMediaElementSafeForDOM が true なので安全に接続可能
+    if (!audioContext || !gainNode) return;
+
+    try {
+      const source = audioContext.createMediaElementSource(element);
+      source.connect(gainNode);
+      mediaElements.set(element, source);
+
+      // 再生開始時に suspended であれば resume を試みる
+      element.addEventListener('play', () => {
+        if (audioContext && audioContext.state === 'suspended') {
+          audioContext.resume().catch(() => {});
+        }
+      });
+    } catch (error) {
+      console.error('Volume Booster: Error processing media element.', error);
+    }
+  }
+
+  // ページ上のすべてのメディア要素を処理
+  function processAllMediaElements() {
+    document.querySelectorAll('video, audio').forEach(processMediaElement);
+  }
+
+  // 指定されたブースト率を保持および適用
   function applyBoost(boost) {
     currentBoost = boost;
     try {
@@ -17,16 +213,74 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     } catch (e) {
       // sessionStorage might be unavailable
     }
+
+    if (canHandleViaDOM()) {
+      if (!gainNode) {
+        if (boost === 100) return; // 100%（デフォルト）時は不要なAudioContext接続を行わない
+        setupAudioContext();
+      }
+
+      if (gainNode) {
+        if (audioContext && audioContext.state === 'suspended') {
+          audioContext.resume().catch(() => {});
+        }
+        gainNode.gain.value = boost / 100;
+        // 未接続のメディア要素があれば確実に処理
+        processAllMediaElements();
+      }
+
+      // DOMモードで正常に動作しているため、もしTab Captureが起動中なら停止（メインフレームのみ）
+      if (window.top === window) {
+        chrome.runtime.sendMessage({ type: 'STOP_TAB_CAPTURE_IF_ANY' }).catch(() => {});
+      }
+    } else {
+      // CORS制限またはメディアなし: メインフレームのみがTab Captureを要請
+      if (window.top === window) {
+        chrome.runtime.sendMessage({
+          type: 'UPDATE_TAB_VOLUME',
+          volume: boost
+        }).catch(() => {});
+      }
+    }
   }
 
-  // DOMの変更を監視してYouTube/Twitchプレイヤーの出現に対応
+  // DOMの変更を監視して新しいメディア要素およびYouTube/Twitchプレイヤーの出現に対応
   function observeDOMChanges() {
     if (domObserver || window.top !== window) return;
 
+    const handleNewMediaElement = (el) => {
+      if (isMediaElementCorsRestricted(el)) {
+        if (currentBoost !== 100 && window.top === window) {
+          chrome.runtime.sendMessage({ type: 'UPDATE_TAB_VOLUME', volume: currentBoost }).catch(() => {});
+        }
+      } else if (isMediaElementSafeForDOM(el)) {
+        if (gainNode) {
+          processMediaElement(el);
+        } else if (currentBoost !== 100) {
+          setupAudioContext();
+        }
+      } else {
+        // ソースがまだ未確定の場合は保留リスナーをセット
+        processMediaElement(el);
+      }
+    };
+
     domObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
+          if (mutation.target.matches && mutation.target.matches('video, audio')) {
+            handleNewMediaElement(mutation.target);
+          }
+        }
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === 1) { // ELEMENT_NODE
+            if (node.matches && node.matches('video, audio')) {
+              handleNewMediaElement(node);
+            }
+            if (node.querySelectorAll) {
+              node.querySelectorAll('video, audio').forEach(handleNewMediaElement);
+            }
+
             if (window.location.hostname.includes('youtube.com')) {
               if (node.id === 'player' || (node.querySelector && node.querySelector('#player'))) {
                 setupYouTubeVolumeScroll();
@@ -44,23 +298,27 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
     const targetNode = document.documentElement || document.body;
     if (targetNode) {
-      domObserver.observe(targetNode, { childList: true, subtree: true });
+      domObserver.observe(targetNode, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['src']
+      });
     }
   }
 
   // ポップアップや設定ページからのメッセージを受信
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'UPDATE_VOLUME') {
-      currentBoost = request.boost;
-      try {
-        sessionStorage.setItem('volumeBoosterCache', request.boost);
-      } catch (e) {}
-      sendResponse({ status: "ok" });
+      applyBoost(request.boost);
+      const isDOM = canHandleViaDOM();
+      sendResponse({ status: "ok", handledByDOM: isDOM });
     } else if (request.type === 'GET_CURRENT_VOLUME') {
       sendResponse({
         boost: currentBoost,
         accountName: currentAccountName,
-        activeSource: activeSource
+        activeSource: activeSource,
+        handledByDOM: canHandleViaDOM()
       });
     } else if (request.type === 'URL_CHANGED') {
       initializeFromStorage();

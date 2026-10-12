@@ -53,7 +53,8 @@ const OptionsAccounts = {
   handleChange(event) {
     if (event.target.classList.contains('list-boost-input')) {
       const keyToUpdate = event.target.dataset.key;
-      const newBoost = parseInt(event.target.value, 10);
+      const newBoost = clamp(parseInt(event.target.value, 10), 10, 600);
+      event.target.value = newBoost;
 
       chrome.storage.sync.get({ accountSettings: {} }, (data) => {
         const settings = data.accountSettings || {};
@@ -98,7 +99,7 @@ const OptionsAccounts = {
         <div class="col-domain">${escapeHTML(displayName)}</div>
         <div class="col-boost">
           <div class="boost-input-wrapper">
-             <input type="number" class="list-boost-input" min="0" max="600" value="${settings[key]}" data-key="${escapeHTML(key)}">
+             <input type="number" class="list-boost-input" min="10" max="600" value="${settings[key]}" data-key="${escapeHTML(key)}">
              <span>%</span>
           </div>
         </div>
