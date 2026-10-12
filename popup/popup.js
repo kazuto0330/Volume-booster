@@ -369,15 +369,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyBoostToTab(boost) {
     if (!currentTab || !currentTab.id) return;
 
-    chrome.scripting.executeScript({
-      target: { tabId: currentTab.id },
-      files: ['common/utils.js', 'content/content.js']
-    }, () => {
+    // 1. バックグラウンドへ音量を送信（自動判定: >100%なら自動Tab Capture、==100%なら自動停止）
+    chrome.runtime.sendMessage({
+      type: 'UPDATE_TAB_VOLUME',
+      tabId: currentTab.id,
+      volume: boost
+    });
+
+    // 2. content.js へ現在の設定を通知（キャッシュやUI同期用）
+    chrome.tabs.sendMessage(currentTab.id, { type: 'UPDATE_VOLUME', boost: boost }, () => {
       if (chrome.runtime.lastError) {
-        console.error(`Script injection failed: ${chrome.runtime.lastError.message}`);
-        return;
+        // Content script が存在しないタブ（chrome://等）は無視
       }
-      chrome.tabs.sendMessage(currentTab.id, { type: 'UPDATE_VOLUME', boost: boost });
     });
   }
 

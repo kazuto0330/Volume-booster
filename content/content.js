@@ -4,123 +4,64 @@
 if (typeof window.volumeBoosterAttached === 'undefined') {
   window.volumeBoosterAttached = true;
 
-  let audioContext = null;
-  let gainNode = null;
-  const mediaElements = new WeakMap();
   let domObserver = null;
   let currentBoost = 100; // 現在のブースト値を保持
   let currentAccountName = null; // 現在のYouTubeアカウント名を保持
   let activeSource = 'default'; // 現在適用されている設定のソース ('live', 'account', 'domain', 'default')
 
-  // Web Audio APIのセットアップ
-  function setupAudioContext() {
-    if (audioContext) return;
-    try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-      // Autoplay Policy 対策: suspended状態ならユーザー操作時にresumeする
-      if (audioContext.state === 'suspended') {
-        const resumeAudio = () => {
-          if (audioContext.state === 'suspended') {
-            audioContext.resume();
-          }
-          ['click', 'keydown', 'touchstart'].forEach(evt => 
-            document.removeEventListener(evt, resumeAudio, { capture: true })
-          );
-        };
-        ['click', 'keydown', 'touchstart'].forEach(evt => 
-          document.addEventListener(evt, resumeAudio, { once: true, capture: true })
-        );
-      }
-
-      gainNode = audioContext.createGain();
-      gainNode.connect(audioContext.destination);
-      processAllMediaElements(); // 既存のメディア要素を接続
-      observeDOMChanges(); // DOM監視を開始
-    } catch (e) {
-      console.error("Volume Booster: Could not create AudioContext.", e);
-    }
-  }
-
-  // 指定されたブースト率を適用
+  // 指定されたブースト率を保持
   function applyBoost(boost) {
-    currentBoost = boost; // 値を更新
+    currentBoost = boost;
     try {
       sessionStorage.setItem('volumeBoosterCache', boost);
     } catch (e) {
       // sessionStorage might be unavailable
     }
-
-    if (!gainNode) {
-      // ブーストが100%（デフォルト）の場合は、AudioContextをセットアップしない
-      // これにより、不要なオーディオグラフの接続とそれに伴うCORSエラーを回避する
-      if (boost === 100) return;
-      
-      setupAudioContext();
-    }
-    
-    if (gainNode) {
-      gainNode.gain.value = boost / 100;
-    }
   }
 
-  // メディア要素をオーディオグラフに接続
-  function processMediaElement(element) {
-    if (!audioContext || mediaElements.has(element)) return;
-    try {
-      const source = audioContext.createMediaElementSource(element);
-      source.connect(gainNode);
-      mediaElements.set(element, source);
-    } catch (error) {
-      console.error('Volume Booster: Error processing media element.', error);
-    }
-  }
-
-  // ページ上のすべてのメディア要素を処理
-  function processAllMediaElements() {
-    document.querySelectorAll('video, audio').forEach(processMediaElement);
-  }
-
-  // DOMの変更を監視して新しいメディア要素に対応
+  // DOMの変更を監視してYouTube/Twitchプレイヤーの出現に対応
   function observeDOMChanges() {
-    if (domObserver) return;
+    if (domObserver || window.top !== window) return;
+
     domObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === 1) { // ELEMENT_NODE
-            if (node.matches('video, audio')) {
-              processMediaElement(node);
-            }
-            node.querySelectorAll('video, audio').forEach(processMediaElement);
-
-            // New: Check for YouTube player
             if (window.location.hostname.includes('youtube.com')) {
-                if (node.id === 'player') {
-                    setupYouTubeVolumeScroll();
-                } else if (node.querySelector && node.querySelector('#player')) {
-                    setupYouTubeVolumeScroll();
-                }
+              if (node.id === 'player' || (node.querySelector && node.querySelector('#player'))) {
+                setupYouTubeVolumeScroll();
+              }
             }
-            // New: Check for Twitch player (simple heuristic)
             if (window.location.hostname.includes('twitch.tv')) {
-                if (node.tagName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
-                    setupTwitchVolumeScroll();
-                }
+              if (node.tagName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
+                setupTwitchVolumeScroll();
+              }
             }
           }
         });
       });
     });
-    domObserver.observe(document.body, { childList: true, subtree: true });
+
+    const targetNode = document.documentElement || document.body;
+    if (targetNode) {
+      domObserver.observe(targetNode, { childList: true, subtree: true });
+    }
   }
 
   // ポップアップや設定ページからのメッセージを受信
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'UPDATE_VOLUME') {
-      applyBoost(request.boost);
+      currentBoost = request.boost;
+      try {
+        sessionStorage.setItem('volumeBoosterCache', request.boost);
+      } catch (e) {}
       sendResponse({ status: "ok" });
     } else if (request.type === 'GET_CURRENT_VOLUME') {
-      sendResponse({ boost: currentBoost, accountName: currentAccountName, activeSource: activeSource });
+      sendResponse({
+        boost: currentBoost,
+        accountName: currentAccountName,
+        activeSource: activeSource
+      });
     } else if (request.type === 'URL_CHANGED') {
       initializeFromStorage();
       sendResponse({ status: "ok" });
@@ -396,63 +337,58 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         // Update global scroll settings
         scrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
         twitchScrollSettings = data.twitchScrollSettings || { enabled: false, step: 5 };        
-        if (window.location.hostname.includes('youtube.com')) {
-            ensureInjectedScript();
-        }
+        // メインフレーム限定でプレーヤー補助機能・アカウント判定を実行
+        if (window.top === window) {
+            if (window.location.hostname.includes('youtube.com')) {
+                ensureInjectedScript();
+            }
 
-        setupYouTubeVolumeScroll();
-        setupTwitchVolumeScroll(); // Initialize Twitch Scroll
+            setupYouTubeVolumeScroll();
+            setupTwitchVolumeScroll(); // Initialize Twitch Scroll
+            observeDOMChanges();
 
-        // Apply YouTube Auto Volume (Player Volume)
-        if (ytAuto.enabled && window.location.hostname.includes('youtube.com')) {
-             // 内部APIを使用するためスクリプトの注入を保証
-             ensureInjectedScript();
-             
-             // 設定値をグローバルに保持（リスナー内で最新の値を参照するため）
-             window.__vbAutoVolumeValue = ytAuto.volume;
+            // Apply YouTube Auto Volume (Player Volume)
+            if (ytAuto.enabled && window.location.hostname.includes('youtube.com')) {
+                 ensureInjectedScript();
+                 window.__vbAutoVolumeValue = ytAuto.volume;
 
-             const setupAutoVolume = () => {
-                 const video = document.querySelector('video');
-                 if (!video) return;
+                 const setupAutoVolume = () => {
+                     const video = document.querySelector('video');
+                     if (!video) return;
 
-                 // イベントリスナーの多重登録を防止
-                 if (!window.__vbAutoVolumeHandlerAttached) {
-                     window.__vbAutoVolumeHandlerAttached = true;
-                     window.__vbLastSetVolumeSrc = null;
+                     if (!window.__vbAutoVolumeHandlerAttached) {
+                         window.__vbAutoVolumeHandlerAttached = true;
+                         window.__vbLastSetVolumeSrc = null;
 
-                     video.addEventListener('playing', () => {
-                         // 新しい動画ソース（新しい動画）の再生が始まった時のみ1度だけ実行
+                         video.addEventListener('playing', () => {
+                             if (window.__vbLastSetVolumeSrc !== video.currentSrc) {
+                                 window.__vbLastSetVolumeSrc = video.currentSrc;
+                                 setTimeout(() => {
+                                     window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: window.__vbAutoVolumeValue }, '*');
+                                 }, 100);
+                             }
+                         });
+                     }
+
+                     if (!video.paused && video.readyState >= 3) {
                          if (window.__vbLastSetVolumeSrc !== video.currentSrc) {
                              window.__vbLastSetVolumeSrc = video.currentSrc;
-                             
-                             // 再生開始直後のYouTube内部処理との競合を避けるため、ごくわずかに遅延させて確実性を上げる
-                             setTimeout(() => {
-                                 window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: window.__vbAutoVolumeValue }, '*');
-                             }, 100);
+                             window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: window.__vbAutoVolumeValue }, '*');
                          }
-                     });
-                 }
-
-                 // 拡張機能のロード時など、既に再生中の場合への対応
-                 if (!video.paused && video.readyState >= 3) {
-                     if (window.__vbLastSetVolumeSrc !== video.currentSrc) {
-                         window.__vbLastSetVolumeSrc = video.currentSrc;
-                         window.postMessage({ type: 'VOLUME_BOOSTER_SET_VOLUME', volume: window.__vbAutoVolumeValue }, '*');
                      }
-                 }
-             };
+                 };
 
-             setupAutoVolume();
+                 setupAutoVolume();
+            }
         }
         
         let targetBoost = null;
         let source = 'default';
         let matchKey = null;
 
-        // 1. YouTube Live Check (Highest Priority)
+        // 1. YouTube Live Check (Highest Priority, Top frame only)
         let isLive = false;
-        // Check if feature enabled AND we are on YouTube
-        if (ytSettings.enabled && window.location.hostname.includes('youtube.com')) {
+        if (window.top === window && ytSettings.enabled && window.location.hostname.includes('youtube.com')) {
             const targetVideoId = getYouTubeVideoId(window.location.href);
             
             if (targetVideoId) {
@@ -471,8 +407,10 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             }
         }
 
-        // Always try to get account name if on YouTube, regardless of Live status
-        currentAccountName = await getAccountInfo();
+        // Always try to get account name if on YouTube, regardless of Live status (Top frame only)
+        if (window.top === window) {
+            currentAccountName = await getAccountInfo();
+        }
 
         if (isLive) {
             sessionStorage.setItem('volumeBoosterIsLiveAutoBoost', 'true');
