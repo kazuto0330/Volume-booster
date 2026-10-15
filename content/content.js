@@ -208,11 +208,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   // 指定されたブースト率を保持および適用
   function applyBoost(boost) {
     currentBoost = boost;
-    try {
-      sessionStorage.setItem('volumeBoosterCache', boost);
-    } catch (e) {
-      // sessionStorage might be unavailable
-    }
 
     if (canHandleViaDOM()) {
       if (!gainNode) {
@@ -307,12 +302,63 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     }
   }
 
+  // タブ一時設定の保存
+  async function saveTabTempBoost(boost) {
+    try {
+      const currentUrl = getNormalizedUrl();
+      const data = await chrome.storage.sync.get({ boostSettings: {}, accountSettings: {} });
+      const settings = data.boostSettings || {};
+      const accountSettings = data.accountSettings || {};
+
+      const matchKey = findBestMatchingKey(currentUrl, settings);
+      const siteBoost = (matchKey && settings[matchKey] !== undefined) ? settings[matchKey] : 100;
+
+      let accountBoost = null;
+      if (currentAccountName) {
+        const accountKey = `youtube:${currentAccountName}`;
+        if (accountSettings[accountKey] !== undefined) {
+          accountBoost = accountSettings[accountKey];
+        }
+      }
+
+      const domain = getDomainFromUrl(window.location.href);
+
+      chrome.runtime.sendMessage({
+        type: 'SET_TAB_TEMP_BOOST',
+        boost: boost,
+        domain: domain,
+        siteBoost: siteBoost,
+        accountBoost: accountBoost
+      }).catch(() => {});
+    } catch (e) {
+      console.error("Volume Booster: Error saving tab temp boost.", e);
+    }
+  }
+
+  // タブ一時設定の消去
+  function clearTabTempBoost() {
+    chrome.runtime.sendMessage({ type: 'CLEAR_TAB_TEMP_BOOST' }).catch(() => {});
+  }
+
   // ポップアップや設定ページからのメッセージを受信
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'UPDATE_VOLUME') {
+      if (request.isTemp) {
+        activeSource = 'temp';
+        if (window.top === window) {
+          saveTabTempBoost(request.boost);
+        }
+      }
       applyBoost(request.boost);
       const isDOM = canHandleViaDOM();
       sendResponse({ status: "ok", handledByDOM: isDOM });
+    } else if (request.type === 'RESET_TEMP_VOLUME') {
+      activeSource = 'default';
+      if (window.top === window) {
+        clearTabTempBoost();
+      }
+      applyBoost(request.fallbackBoost);
+      sendResponse({ status: "ok" });
     } else if (request.type === 'GET_CURRENT_VOLUME') {
       sendResponse({
         boost: currentBoost,
@@ -640,9 +686,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             }
         }
         
-        let targetBoost = null;
-        let source = 'default';
-        let matchKey = null;
 
         // 1. YouTube Live Check (Highest Priority, Top frame only)
         let isLive = false;
@@ -677,71 +720,70 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             return;
         }
 
-        // YouTube Liveから遷移した場合、キャッシュされたブーストをリセット
-        if (sessionStorage.getItem('volumeBoosterIsLiveAutoBoost') === 'true') {
-             sessionStorage.removeItem('volumeBoosterCache');
-             sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost');
-        }
-        
-        // 2. Account Check (High Priority)
+        // サイト全体設定の評価 (Site-wide)
+        const siteMatchKey = findBestMatchingKey(currentUrl, settings);
+        const currentSiteBoost = (siteMatchKey && settings[siteMatchKey] !== undefined) ? settings[siteMatchKey] : 100;
+
+        // アカウント別設定の評価 (Account-specific)
+        let currentAccountBoost = null;
         if (currentAccountName) {
             const accountKey = `youtube:${currentAccountName}`;
             if (accountSettings[accountKey] !== undefined) {
-                targetBoost = accountSettings[accountKey];
-                matchKey = accountKey;
-                source = 'account';
+                currentAccountBoost = accountSettings[accountKey];
             }
         }
 
-        // 3. Domain Match Logic (Low Priority - only if no account setting found)
-        if (targetBoost === null) {
-            matchKey = findBestMatchingKey(currentUrl, settings);
-            if (matchKey) {
-                source = 'domain';
-                targetBoost = settings[matchKey];
-            }
+        const currentDomain = getDomainFromUrl(window.location.href);
+
+        // タブ一時設定（"現在のタブのみ"の操作による設定）の取得と条件検証
+        let tabTempOverride = null;
+        try {
+            tabTempOverride = await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ type: 'GET_TAB_TEMP_BOOST' }, (resp) => {
+                    if (chrome.runtime.lastError || !resp) {
+                        resolve(null);
+                    } else {
+                        resolve(resp.tempOverride || null);
+                    }
+                });
+            });
+        } catch (err) {
+            tabTempOverride = null;
         }
 
-        // Apply Logic
-        if (matchKey) {
-            const previousMatchKey = sessionStorage.getItem('volumeBoosterMatchKey');
-            const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
-            
-            sessionStorage.setItem('volumeBoosterMatchKey', matchKey);
+        let isTempMaintained = false;
+        if (tabTempOverride) {
+            // 条件1: 同一のドメイン内での移動であること
+            const isSameDom = isSameDomain(tabTempOverride.domain, currentDomain);
 
-            if (previousMatchKey === matchKey && cachedBoost) {
-                applyBoost(parseInt(cachedBoost, 10));
-                activeSource = source; 
+            // 条件2: サイト全体とアカウントに設定されている数値が遷移前と遷移後で同一な事
+            const isSameSiteBoost = tabTempOverride.siteBoost === currentSiteBoost;
+            const isSameAccountBoost = tabTempOverride.accountBoost === currentAccountBoost;
+
+            if (isSameDom && isSameSiteBoost && isSameAccountBoost) {
+                // 条件をすべて満たす: "現在のタブのみ"の数値を維持
+                isTempMaintained = true;
+                activeSource = 'temp';
+                applyBoost(tabTempOverride.boost);
             } else {
-                applyBoost(targetBoost);
-                activeSource = source;
-            }
-        } else {
-            // No specific setting found
-            const previousMatchKey = sessionStorage.getItem('volumeBoosterMatchKey');
-            
-            // If we had a match key previously but now we don't, it means we transitioned 
-            // from a managed context (Account/Domain) to an unmanaged one.
-            // In this case, we should NOT restore the cache (which belongs to the managed context),
-            // but instead reset to default.
-            if (previousMatchKey) {
-                sessionStorage.removeItem('volumeBoosterCache');
-                sessionStorage.removeItem('volumeBoosterMatchKey');
-                applyBoost(100);
-                activeSource = 'default';
-            } else {
-                // If we didn't have a match key previously either, then any cache is a manual user override
-                // that should persist.
-                sessionStorage.removeItem('volumeBoosterMatchKey'); // Ensure it's cleared
-                
-                const cachedBoost = sessionStorage.getItem('volumeBoosterCache');
-                if (cachedBoost) {
-                    applyBoost(parseInt(cachedBoost, 10));
-                    activeSource = 'temp'; 
-                } else {
-                    applyBoost(100); // デフォルト値
-                    activeSource = 'default';
+                // 条件を満たさない: メインフレームのみが一時設定を破棄
+                if (window.top === window) {
+                    clearTabTempBoost();
                 }
+            }
+        }
+
+        // 一時設定が維持されなかった場合、通常の優先順位に基づいて適用
+        if (!isTempMaintained) {
+            if (currentAccountBoost !== null) {
+                activeSource = 'account';
+                applyBoost(currentAccountBoost);
+            } else if (siteMatchKey) {
+                activeSource = 'domain';
+                applyBoost(currentSiteBoost);
+            } else {
+                activeSource = 'default';
+                applyBoost(100);
             }
         }
     } catch (e) {

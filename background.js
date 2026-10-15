@@ -154,10 +154,66 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
     });
     closeOffscreenDocumentIfIdle();
   }
+
+  // タブ一時設定のクリーンアップ
+  try {
+    if (chrome.storage && chrome.storage.session) {
+      chrome.storage.session.remove([`tab_temp_${tabId}`]);
+    }
+  } catch (e) {
+    // ignore
+  }
 });
 
 // メッセージハンドラー
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'SET_TAB_TEMP_BOOST') {
+    const tabId = request.tabId || (sender.tab ? sender.tab.id : null);
+    if (tabId) {
+      const key = `tab_temp_${tabId}`;
+      const data = {
+        boost: request.boost,
+        domain: request.domain,
+        siteBoost: request.siteBoost,
+        accountBoost: request.accountBoost
+      };
+      if (chrome.storage && chrome.storage.session) {
+        chrome.storage.session.set({ [key]: data }, () => {
+          sendResponse({ success: true });
+        });
+        return true;
+      }
+    }
+    sendResponse({ success: false });
+    return false;
+  }
+
+  if (request.type === 'GET_TAB_TEMP_BOOST') {
+    const tabId = request.tabId || (sender.tab ? sender.tab.id : null);
+    if (tabId && chrome.storage && chrome.storage.session) {
+      const key = `tab_temp_${tabId}`;
+      chrome.storage.session.get([key], (result) => {
+        sendResponse({ tempOverride: result ? result[key] || null : null });
+      });
+      return true;
+    }
+    sendResponse({ tempOverride: null });
+    return false;
+  }
+
+  if (request.type === 'CLEAR_TAB_TEMP_BOOST') {
+    const tabId = request.tabId || (sender.tab ? sender.tab.id : null);
+    if (tabId && chrome.storage && chrome.storage.session) {
+      const key = `tab_temp_${tabId}`;
+      chrome.storage.session.remove([key], () => {
+        sendResponse({ success: true });
+      });
+      return true;
+    }
+    sendResponse({ success: false });
+    return false;
+  }
+
   if (request.type === 'UPDATE_TAB_VOLUME') {
     // 自動判定による音量更新（>100%なら自動起動、==100%なら自動停止）
     const tabId = request.tabId || (sender.tab ? sender.tab.id : null);

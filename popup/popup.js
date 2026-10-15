@@ -135,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
               updateActiveIndicators();
             } else {
               updateControls(tempSlider, tempNumberInput, response.boost);
+              isTempActive = (response.activeSource === 'temp');
 
               if (response.accountName) {
                 currentAccountName = response.accountName;
@@ -228,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const boost = sanitizeBoostValue(value);
     updateControls(tempSlider, tempNumberInput, boost);
     isTempActive = true;
-    applyBoostToTab(boost);
+    applyBoostToTab(boost, true);
     updateActiveIndicators();
   }
 
@@ -335,7 +336,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     updateControls(tempSlider, tempNumberInput, fallbackBoost);
-    applyBoostToTab(fallbackBoost);
+    
+    if (currentTab && currentTab.id) {
+      chrome.tabs.sendMessage(currentTab.id, {
+        type: 'RESET_TEMP_VOLUME',
+        fallbackBoost: fallbackBoost
+      }, () => {
+        if (chrome.runtime.lastError) {}
+      });
+    }
+
     updateActiveIndicators();
   }
 
@@ -366,11 +376,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function applyBoostToTab(boost) {
+  function applyBoostToTab(boost, isTemp = false) {
     if (!currentTab || !currentTab.id) return;
 
     // content.js へ音量更新を送信（Content Script 側で DOM または必要時のみ Tab Capture を自律制御）
-    chrome.tabs.sendMessage(currentTab.id, { type: 'UPDATE_VOLUME', boost: boost }, () => {
+    chrome.tabs.sendMessage(currentTab.id, {
+      type: 'UPDATE_VOLUME',
+      boost: boost,
+      isTemp: isTemp
+    }, () => {
       if (chrome.runtime.lastError) {
         // Content script が未注入の保護ページ（chrome:// 等）は無視
       }
