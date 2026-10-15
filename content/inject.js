@@ -18,24 +18,58 @@
   function checkLiveStatus() {
     let isLive = false;
     let currentVideoId = null;
+    let author = null;
     try {
       const player = getPlayer();
-      if (player && typeof player.getPlayerResponse === 'function') {
-        const resp = player.getPlayerResponse();
-        if (resp && resp.videoDetails) {
-            if (resp.videoDetails.isLiveContent) isLive = true;
-            currentVideoId = resp.videoDetails.videoId;
+      if (player) {
+        if (typeof player.getVideoData === 'function') {
+          const vd = player.getVideoData();
+          if (vd && vd.author) author = vd.author;
+          if (vd && vd.video_id) currentVideoId = vd.video_id;
         }
-      } else if (window.ytInitialPlayerResponse) {
-        if (window.ytInitialPlayerResponse.videoDetails) {
-            if (window.ytInitialPlayerResponse.videoDetails.isLiveContent) isLive = true;
-            currentVideoId = window.ytInitialPlayerResponse.videoDetails.videoId;
+        if (typeof player.getPlayerResponse === 'function') {
+          const resp = player.getPlayerResponse();
+          if (resp && resp.videoDetails) {
+              if (resp.videoDetails.isLiveContent) isLive = true;
+              if (!currentVideoId) currentVideoId = resp.videoDetails.videoId;
+              if (!author) author = resp.videoDetails.author || null;
+          }
         }
+      }
+      if (!author && window.ytInitialPlayerResponse && window.ytInitialPlayerResponse.videoDetails) {
+        if (window.ytInitialPlayerResponse.videoDetails.isLiveContent) isLive = true;
+        if (!currentVideoId) currentVideoId = window.ytInitialPlayerResponse.videoDetails.videoId;
+        author = window.ytInitialPlayerResponse.videoDetails.author || null;
       }
     } catch (e) {
       // Silent error
     }
-    window.postMessage({ type: 'VOLUME_BOOSTER_LIVE_STATUS_RESULT', isLive: isLive, videoId: currentVideoId }, '*');
+    window.postMessage({ type: 'VOLUME_BOOSTER_LIVE_STATUS_RESULT', isLive: isLive, videoId: currentVideoId, author: author }, '*');
+  }
+
+  function getAuthor() {
+    let author = null;
+    try {
+      const player = getPlayer();
+      if (player) {
+        if (typeof player.getVideoData === 'function') {
+          const vd = player.getVideoData();
+          if (vd && vd.author) author = vd.author;
+        }
+        if (!author && typeof player.getPlayerResponse === 'function') {
+          const resp = player.getPlayerResponse();
+          if (resp && resp.videoDetails && resp.videoDetails.author) {
+            author = resp.videoDetails.author;
+          }
+        }
+      }
+      if (!author && window.ytInitialPlayerResponse && window.ytInitialPlayerResponse.videoDetails) {
+        author = window.ytInitialPlayerResponse.videoDetails.author || null;
+      }
+    } catch (e) {
+      // Silent error
+    }
+    window.postMessage({ type: 'VOLUME_BOOSTER_AUTHOR_RESULT', author: author }, '*');
   }
 
   function setVolume(volume) {
@@ -71,6 +105,8 @@
     
     if (event.data.type === 'VOLUME_BOOSTER_CHECK_LIVE') {
       checkLiveStatus();
+    } else if (event.data.type === 'VOLUME_BOOSTER_GET_AUTHOR') {
+      getAuthor();
     } else if (event.data.type === 'VOLUME_BOOSTER_SET_VOLUME') {
       setVolume(event.data.volume);
     } else if (event.data.type === 'VOLUME_BOOSTER_ADJUST_VOLUME') {

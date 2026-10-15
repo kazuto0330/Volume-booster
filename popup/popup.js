@@ -127,37 +127,191 @@ document.addEventListener('DOMContentLoaded', () => {
           hasDomainSetting = settings[currentDomain] !== undefined;
           updateControls(domainSlider, domainNumberInput, domainBoost);
 
-          // content.jsから現在のタブの音量を取得
-          chrome.tabs.sendMessage(currentTab.id, { type: 'GET_CURRENT_VOLUME' }, (response) => {
-            if (chrome.runtime.lastError) {
-              updateControls(tempSlider, tempNumberInput, domainBoost);
-              accountGroup.style.display = 'none';
-              updateActiveIndicators();
-            } else {
-              updateControls(tempSlider, tempNumberInput, response.boost);
-              isTempActive = (response.activeSource === 'temp');
+          function detectAccountNameDirectly(tabId) {
+            return new Promise((resolve) => {
+              if (!chrome.scripting || !tabId) return resolve(null);
+              chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                func: () => {
+                  try {
+                    // 1. YouTube構造化メタデータ (<span itemprop="author"> 内の itemprop="name")
+                    const authorMeta = document.querySelector('[itemprop="author"] [itemprop="name"], [itemprop="author"] meta[itemprop="name"], link[itemprop="name"], meta[name="author"]');
+                    if (authorMeta) {
+                      const content = authorMeta.getAttribute('content') || authorMeta.textContent;
+                      if (content && content.trim()) return content.trim();
+                    }
 
-              if (response.accountName) {
-                currentAccountName = response.accountName;
-                accountGroup.style.display = 'block';
-                accountTitle.textContent = strings[currentLang].accountSpecific(currentAccountName);
+                    // 2. DOM要素の探索
+                    const selectors = [
+                      '#owner ytd-channel-name yt-formatted-string#text',
+                      'ytd-watch-metadata #owner #channel-name yt-formatted-string',
+                      '#upload-info ytd-channel-name yt-formatted-string',
+                      'ytd-video-owner-renderer ytd-channel-name yt-formatted-string',
+                      '#channel-name yt-formatted-string#text',
+                      'ytd-channel-name #text',
+                      'ytd-watch-metadata #owner #channel-name a',
+                      '#owner #channel-name a',
+                      'ytd-video-owner-renderer #channel-name a',
+                      '#channel-name a',
+                      'ytd-channel-name a',
+                      'ytd-reel-player-header-renderer .ytd-channel-name a',
+                      '#reel-player-header #channel-name'
+                    ];
 
-                chrome.storage.sync.get({ accountSettings: {} }, (accData) => {
-                  const accSettings = accData.accountSettings || {};
-                  const accountKey = `youtube:${currentAccountName}`;
-                  const accountBoost = accSettings[accountKey] ?? 100;
-                  hasAccountSetting = accSettings[accountKey] !== undefined;
+                    for (const sel of selectors) {
+                      const elements = document.querySelectorAll(sel);
+                      for (const el of elements) {
+                        const txt = el.textContent ? el.textContent.trim() : '';
+                        if (txt.length > 0) {
+                          const cleanTxt = txt.split('\n').map(s => s.trim()).filter(Boolean)[0];
+                          if (cleanTxt && cleanTxt.length > 0) return cleanTxt;
+                        }
+                      }
+                    }
+                  } catch (e) {}
+                  return null;
+                }
+              }, (results) => {
+                if (chrome.runtime.lastError || !results || !results[0] || !results[0].result) {
+                  resolve(null);
+                } else {
+                  resolve(results[0].result);
+                }
+              });
+            });
+          }
 
-                  updateControls(accountSlider, accountNumberInput, accountBoost);
-                  updateActiveIndicators();
-                  PopupUI.updateAccordionHeight();
-                });
+          function setupAccountUI(accountName, tabTempOverride = null) {
+            currentAccountName = accountName;
+            accountGroup.style.display = 'block';
+            accountTitle.textContent = strings[currentLang].accountSpecific(currentAccountName);
+
+            chrome.storage.sync.get({ accountSettings: {} }, (accData) => {
+              const accSettings = accData.accountSettings || {};
+              const accountKey = `youtube:${currentAccountName}`;
+              hasAccountSetting = accSettings[accountKey] !== undefined;
+              const currentAccountBoost = hasAccountSetting ? accSettings[accountKey] : null;
+
+              // 一時設定がある場合、アカウント設定の遷移前後一致条件を検証
+              if (tabTempOverride && isTempActive) {
+                const isSameAccountBoost = tabTempOverride.accountBoost === currentAccountBoost;
+                if (!isSameAccountBoost) {
+                  // アカウント設定が遷移前と異なるため、一時設定を解除
+                  isTempActive = false;
+                  if (currentTab && currentTab.id) {
+                    chrome.runtime.sendMessage({ type: 'CLEAR_TAB_TEMP_BOOST', tabId: currentTab.id });
+                  }
+                }
+              }
+
+              // アカウントに数値が設定されていない場合は、遷移前から数値が継承されているなら現在のタブのみ、なければサイト全体の数値をセット
+              let accountBoost;
+              if (hasAccountSetting) {
+                accountBoost = accSettings[accountKey];
+              } else if (isTempActive) {
+                accountBoost = parseInt(tempSlider.value, 10);
               } else {
-                accountGroup.style.display = 'none';
-                updateActiveIndicators();
-                PopupUI.updateAccordionHeight();
+                accountBoost = parseInt(domainSlider.value, 10);
+              }
+              updateControls(accountSlider, accountNumberInput, accountBoost);
+
+              // 現在のタブの初期値: 一時設定が有効でない場合のみ、設定されていればアカウント、なければサイト全体の数値を適用
+              if (!isTempActive) {
+                const initialTempBoost = hasAccountSetting ? accountBoost : domainBoost;
+                updateControls(tempSlider, tempNumberInput, initialTempBoost);
+              }
+
+              updateActiveIndicators();
+              PopupUI.updateAccordionHeight();
+            });
+          }
+
+          function fetchAccountWithRetry(tabId, attemptsLeft = 5, tabTempOverride = null) {
+            if (attemptsLeft <= 0 || currentAccountName) return;
+            setTimeout(async () => {
+              if (currentAccountName) return;
+
+              // 直接DOM探索を試行
+              const directName = await detectAccountNameDirectly(tabId);
+              if (directName) {
+                setupAccountUI(directName, tabTempOverride);
+                return;
+              }
+
+              chrome.tabs.sendMessage(tabId, { type: 'GET_CURRENT_VOLUME' }, { frameId: 0 }, (res) => {
+                if (!chrome.runtime.lastError && res && res.accountName) {
+                  setupAccountUI(res.accountName, tabTempOverride);
+                } else if (attemptsLeft > 1) {
+                  fetchAccountWithRetry(tabId, attemptsLeft - 1, tabTempOverride);
+                }
+              });
+            }, 300);
+          }
+
+          // バックグラウンドのセッションストレージからタブ一時設定を確認（超高速・安定）
+          chrome.runtime.sendMessage({ type: 'GET_TAB_TEMP_BOOST', tabId: currentTab.id }, (tempResp) => {
+            const tabTempOverride = tempResp ? tempResp.tempOverride : null;
+            let preTempBoost = domainBoost;
+
+            if (tabTempOverride && isSameDomain(tabTempOverride.domain, currentDomain)) {
+              if (tabTempOverride.siteBoost === domainBoost) {
+                // ドメインとサイト全体設定が一致しているため、一時設定を維持と判定
+                isTempActive = true;
+                preTempBoost = tabTempOverride.boost;
               }
             }
+
+            // 初期表示として反映
+            updateControls(tempSlider, tempNumberInput, preTempBoost);
+            updateActiveIndicators();
+
+            // content.jsから現在のタブの音量を取得（メインフレーム限定 frameId: 0）
+            chrome.tabs.sendMessage(currentTab.id, { type: 'GET_CURRENT_VOLUME' }, { frameId: 0 }, async (response) => {
+              if (chrome.runtime.lastError || !response) {
+                if (!isTempActive) {
+                  updateControls(tempSlider, tempNumberInput, domainBoost);
+                }
+                accountGroup.style.display = 'none';
+                updateActiveIndicators();
+
+                if (currentTab.url && currentTab.url.includes('youtube.com')) {
+                  const directName = await detectAccountNameDirectly(currentTab.id);
+                  if (directName) {
+                    setupAccountUI(directName, tabTempOverride);
+                  } else {
+                    fetchAccountWithRetry(currentTab.id, 5, tabTempOverride);
+                  }
+                }
+              } else {
+                if (response.activeSource === 'temp') {
+                  isTempActive = true;
+                  updateControls(tempSlider, tempNumberInput, response.boost);
+                } else if (response.activeSource === 'account' || response.activeSource === 'domain' || response.activeSource === 'default') {
+                  if (!tabTempOverride || !isTempActive) {
+                    isTempActive = false;
+                    updateControls(tempSlider, tempNumberInput, response.boost);
+                  }
+                }
+
+                if (response.accountName) {
+                  setupAccountUI(response.accountName, tabTempOverride);
+                } else if (currentTab.url && currentTab.url.includes('youtube.com')) {
+                  const directName = await detectAccountNameDirectly(currentTab.id);
+                  if (directName) {
+                    setupAccountUI(directName, tabTempOverride);
+                  } else {
+                    accountGroup.style.display = 'none';
+                    updateActiveIndicators();
+                    PopupUI.updateAccordionHeight();
+                    fetchAccountWithRetry(currentTab.id, 5, tabTempOverride);
+                  }
+                } else {
+                  accountGroup.style.display = 'none';
+                  updateActiveIndicators();
+                  PopupUI.updateAccordionHeight();
+                }
+              }
+            });
           });
         });
       } else {
@@ -239,9 +393,14 @@ document.addEventListener('DOMContentLoaded', () => {
     hasDomainSetting = true;
     saveDomainBoost(boost);
 
-    if (!hasAccountSetting && !isTempActive) {
-      updateControls(tempSlider, tempNumberInput, boost);
-      applyBoostToTab(boost);
+    // アカウントとサイト全体のどちらかのスライダーを操作したら、現在のタブのみにもその数値を適用
+    isTempActive = false;
+    updateControls(tempSlider, tempNumberInput, boost);
+    applyBoostToTab(boost, false);
+    if (currentTab && currentTab.id) {
+      chrome.tabs.sendMessage(currentTab.id, { type: 'CLEAR_TEMP_ONLY' }, () => {
+        if (chrome.runtime.lastError) {}
+      });
     }
     updateActiveIndicators();
   }
@@ -252,9 +411,14 @@ document.addEventListener('DOMContentLoaded', () => {
     hasAccountSetting = true;
     saveAccountBoost(boost);
 
-    if (!isTempActive) {
-      updateControls(tempSlider, tempNumberInput, boost);
-      applyBoostToTab(boost);
+    // アカウントとサイト全体のどちらかのスライダーを操作したら、現在のタブのみにもその数値を適用
+    isTempActive = false;
+    updateControls(tempSlider, tempNumberInput, boost);
+    applyBoostToTab(boost, false);
+    if (currentTab && currentTab.id) {
+      chrome.tabs.sendMessage(currentTab.id, { type: 'CLEAR_TEMP_ONLY' }, () => {
+        if (chrome.runtime.lastError) {}
+      });
     }
     updateActiveIndicators();
   }
@@ -286,6 +450,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
   }
 
+  // 設定削除後に次に適用されるべき音量を算出
+  function getNextEffectiveBoost({ excludeType }) {
+    const effHasAccount = excludeType === 'account' ? false : hasAccountSetting;
+    const effHasDomain = excludeType === 'domain' ? false : hasDomainSetting;
+
+    if (effHasAccount) {
+      return parseInt(accountSlider.value, 10);
+    } else if (effHasDomain) {
+      return parseInt(domainSlider.value, 10);
+    } else {
+      return 100;
+    }
+  }
+
   // --- Reset Handlers ---
   function handleDomainReset() {
     if (!currentDomain) return;
@@ -296,9 +474,21 @@ document.addEventListener('DOMContentLoaded', () => {
         hasDomainSetting = false;
         updateControls(domainSlider, domainNumberInput, 100);
 
-        if (!hasAccountSetting && !isTempActive) {
-          updateControls(tempSlider, tempNumberInput, 100);
-          applyBoostToTab(100);
+        isTempActive = false;
+        const nextBoost = getNextEffectiveBoost({ excludeType: 'domain' });
+        updateControls(tempSlider, tempNumberInput, nextBoost);
+        applyBoostToTab(nextBoost, false);
+
+        if (currentTab && currentTab.id) {
+          chrome.tabs.sendMessage(currentTab.id, {
+            type: 'RESET_TEMP_VOLUME',
+            fallbackBoost: nextBoost
+          }, () => {
+            if (chrome.runtime.lastError) {}
+          });
+          chrome.tabs.sendMessage(currentTab.id, { type: 'SETTINGS_UPDATED' }, () => {
+            if (chrome.runtime.lastError) {}
+          });
         }
         updateActiveIndicators();
       });
@@ -315,10 +505,21 @@ document.addEventListener('DOMContentLoaded', () => {
         hasAccountSetting = false;
         updateControls(accountSlider, accountNumberInput, 100);
 
-        if (!isTempActive) {
-          const fallbackBoost = parseInt(domainSlider.value, 10);
-          updateControls(tempSlider, tempNumberInput, fallbackBoost);
-          applyBoostToTab(fallbackBoost);
+        isTempActive = false;
+        const nextBoost = getNextEffectiveBoost({ excludeType: 'account' });
+        updateControls(tempSlider, tempNumberInput, nextBoost);
+        applyBoostToTab(nextBoost, false);
+
+        if (currentTab && currentTab.id) {
+          chrome.tabs.sendMessage(currentTab.id, {
+            type: 'RESET_TEMP_VOLUME',
+            fallbackBoost: nextBoost
+          }, () => {
+            if (chrome.runtime.lastError) {}
+          });
+          chrome.tabs.sendMessage(currentTab.id, { type: 'SETTINGS_UPDATED' }, () => {
+            if (chrome.runtime.lastError) {}
+          });
         }
         updateActiveIndicators();
       });
@@ -327,16 +528,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleTempReset() {
     isTempActive = false;
-    let fallbackBoost = 100;
-
-    if (hasAccountSetting) {
-      fallbackBoost = parseInt(accountSlider.value, 10);
-    } else if (hasDomainSetting) {
-      fallbackBoost = parseInt(domainSlider.value, 10);
-    }
+    const fallbackBoost = getNextEffectiveBoost({ excludeType: 'temp' });
 
     updateControls(tempSlider, tempNumberInput, fallbackBoost);
-    
+    applyBoostToTab(fallbackBoost, false);
+
     if (currentTab && currentTab.id) {
       chrome.tabs.sendMessage(currentTab.id, {
         type: 'RESET_TEMP_VOLUME',
