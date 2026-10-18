@@ -20,6 +20,7 @@ const PopupUI = {
   domainActiveIndicator: null,
   accountActiveIndicator: null,
   tempActiveIndicator: null,
+  tempLiveBadge: null,
 
   init(elements) {
     this.languageSelectorContainer = elements.languageSelectorContainer;
@@ -33,6 +34,7 @@ const PopupUI = {
     this.domainActiveIndicator = elements.domainActiveIndicator;
     this.accountActiveIndicator = elements.accountActiveIndicator;
     this.tempActiveIndicator = elements.tempActiveIndicator;
+    this.tempLiveBadge = elements.tempLiveBadge;
   },
 
   initLanguageSelector(availableLanguages, onLanguageSelect) {
@@ -175,11 +177,12 @@ const PopupUI = {
   },
 
   updateActiveIndicators(state) {
-    const { hasDomainSetting, hasAccountSetting, isTempActive, currentEffectiveBoost } = state;
+    const { hasDomainSetting, hasAccountSetting, isTempActive, currentEffectiveBoost, isLiveBoost, liveMultiplier } = state;
 
     this.domainActiveIndicator.style.display = 'none';
     this.accountActiveIndicator.style.display = 'none';
     this.tempActiveIndicator.style.display = 'none';
+    if (this.tempLiveBadge) this.tempLiveBadge.style.display = 'none';
 
     // リセットメニュー項目の表示制御
     let visibleItemsCount = 0;
@@ -198,7 +201,7 @@ const PopupUI = {
       this.accountResetItem.style.display = 'none';
     }
 
-    if (isTempActive) {
+    if (isTempActive || isLiveBoost) {
       this.tempResetItem.style.display = 'block';
       visibleItemsCount++;
     } else {
@@ -211,8 +214,16 @@ const PopupUI = {
       this.noSettingsItem.style.display = 'none';
     }
 
-    const isAllDefault = !hasDomainSetting && !hasAccountSetting && !isTempActive && currentEffectiveBoost === 100;
+    const isAllDefault = !hasDomainSetting && !hasAccountSetting && !isTempActive && !isLiveBoost && currentEffectiveBoost === 100;
     if (isAllDefault) return;
+
+    if (isLiveBoost && typeof liveMultiplier === 'number') {
+      if (this.tempLiveBadge) {
+        this.tempLiveBadge.textContent = `LIVE x${liveMultiplier.toFixed(1)}`;
+        this.tempLiveBadge.style.display = 'inline-block';
+      }
+      return;
+    }
 
     if (isTempActive) {
       this.tempActiveIndicator.style.display = 'inline-block';

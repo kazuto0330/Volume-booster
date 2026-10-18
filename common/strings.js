@@ -10,7 +10,7 @@ const strings = {
     welcomeSection2Title: "2. その他の便利機能（オプション）",
     welcomeSection2Intro: "この拡張機能には、他にも便利な機能がたくさんあります。拡張機能アイコンを右クリックして「オプション」から設定できます。",
     welcomeFeature1Title: "YouTube Live音量調整",
-    welcomeFeature1Desc: "YouTube Liveを開いた時だけ、自動的に指定した音量に変更します。",
+    welcomeFeature1Desc: "YouTube Liveを開いた時だけ、自動的に指定倍率の音量に変更します。",
     welcomeFeature2Title: "YouTube自動音量",
     welcomeFeature2Desc: "YouTubeを開いた時、常に決まった音量で再生を開始します。",
     welcomeFeature3Title: "マウスホイールで音量調整",
@@ -65,8 +65,8 @@ const strings = {
     // New Settings
     generalSettings: "一般設定",
     youtubeLiveSettings: "YouTube Live設定",
-    enableYoutubeLiveLowering: "YouTubeライブで音量を変更する",
-    targetVolume: "目標音量",
+    enableYoutubeLiveLowering: "YouTube Liveで音量倍率を自動適用する",
+    targetVolume: "音量倍率",
     // Auto Volume Settings
     youtubeAutoSettings: "YouTube自動音量設定",
     enableYoutubeAuto: "YouTubeを開いた時に音量を自動設定する",
@@ -95,7 +95,7 @@ const strings = {
     welcomeSection2Title: "2. Other Awesome Features (Options)",
     welcomeSection2Intro: "This extension has more useful features. Right-click the extension icon and select 'Options' to enable them.",
     welcomeFeature1Title: "YouTube Live Volume Control",
-    welcomeFeature1Desc: "Automatically set a specific volume only when you open YouTube Live streams.",
+    welcomeFeature1Desc: "Automatically apply a volume multiplier when opening YouTube Live streams.",
     welcomeFeature2Title: "YouTube Auto Volume",
     welcomeFeature2Desc: "Always start videos at your preferred volume when you open YouTube.",
     welcomeFeature3Title: "Mouse Wheel Volume Control",
@@ -150,8 +150,8 @@ const strings = {
     // New Settings
     generalSettings: "General Settings",
     youtubeLiveSettings: "YouTube Live Settings",
-    enableYoutubeLiveLowering: "Change volume on YouTube Live",
-    targetVolume: "Target Volume",
+    enableYoutubeLiveLowering: "Automatically apply volume multiplier on YouTube Live",
+    targetVolume: "Volume Multiplier",
     // Auto Volume Settings
     youtubeAutoSettings: "YouTube Auto Volume Settings",
     enableYoutubeAuto: "Automatically set volume when opening YouTube",

@@ -11,6 +11,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   let currentBoost = 100; // 現在のブースト値を保持
   let currentAccountName = null; // 現在のYouTubeアカウント名を保持
   let activeSource = 'default'; // 現在適用されている設定のソース ('live', 'account', 'domain', 'default')
+  let currentLiveMultiplier = null; // YouTube Live適用時の倍率を保持
 
   // メディア要素から現在の有効なソースURLを取得
   function getMediaElementSourceUrl(element) {
@@ -353,6 +354,8 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     if (request.type === 'UPDATE_VOLUME') {
       if (request.isTemp) {
         activeSource = 'temp';
+        currentLiveMultiplier = null;
+        try { sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost'); } catch (e) {}
         if (window.top === window) {
           saveTabTempBoost(request.boost);
         }
@@ -362,12 +365,16 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       sendResponse({ status: "ok", handledByDOM: isDOM });
     } else if (request.type === 'RESET_TEMP_VOLUME') {
       activeSource = 'default';
+      currentLiveMultiplier = null;
+      try { sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost'); } catch (e) {}
       if (window.top === window) {
         clearTabTempBoost();
       }
       applyBoost(request.fallbackBoost);
       sendResponse({ status: "ok" });
     } else if (request.type === 'CLEAR_TEMP_ONLY') {
+      currentLiveMultiplier = null;
+      try { sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost'); } catch (e) {}
       if (window.top === window) {
         clearTabTempBoost();
       }
@@ -389,6 +396,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
           boost: currentBoost,
           accountName: currentAccountName,
           activeSource: activeSource,
+          liveMultiplier: activeSource === 'live' ? currentLiveMultiplier : null,
           handledByDOM: canHandleViaDOM()
         });
       });
@@ -738,15 +746,25 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         const data = await chrome.storage.sync.get({
             boostSettings: {},
             accountSettings: {},
-            ytLiveSettings: { enabled: false, targetVolume: 60 },
+            ytLiveSettings: { enabled: false, multiplier: 1.0 },
             ytAutoSettings: { enabled: false, volume: 30 },
             ytScrollSettings: { enabled: false, step: 5 },
             twitchScrollSettings: { enabled: false, step: 5 }
         });
         const settings = data.boostSettings || {};
         const accountSettings = data.accountSettings || {};
-        const ytSettings = data.ytLiveSettings || { enabled: false, targetVolume: 60 };
         const ytAuto = data.ytAutoSettings || { enabled: false, volume: 30 };
+        let ytLiveMultiplier = 1.0;
+        let ytLiveEnabled = false;
+        if (data.ytLiveSettings) {
+            ytLiveEnabled = !!data.ytLiveSettings.enabled;
+            if (typeof data.ytLiveSettings.multiplier === 'number') {
+                ytLiveMultiplier = data.ytLiveSettings.multiplier;
+            } else if (typeof data.ytLiveSettings.targetVolume === 'number') {
+                ytLiveMultiplier = Math.round((data.ytLiveSettings.targetVolume / 100) * 10) / 10;
+            }
+        }
+        ytLiveMultiplier = clamp(Math.round(ytLiveMultiplier * 10) / 10, 0.1, 5.0);
 
         // Update global scroll settings
         scrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
@@ -799,25 +817,35 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
 
         // 1. YouTube Live Check (Highest Priority, Top frame only)
         let isLive = false;
-        if (window.top === window && ytSettings.enabled && window.location.hostname.includes('youtube.com')) {
+        if (window.top === window && ytLiveEnabled && window.location.hostname.includes('youtube.com')) {
             const targetVideoId = getYouTubeVideoId(window.location.href);
             
-            if (targetVideoId) {
-                let attempts = 0;
-                while (attempts < 10) {
-                    const status = await checkLiveStatusViaInjection();
-                    
-                    if (status.videoId === targetVideoId) {
-                        isLive = status.isLive;
-                        if (status.author) {
-                            currentAccountName = status.author;
-                        }
-                        break;
+            // DOM即時判定 (ライブバッジ等)
+            const domLiveIndicator = document.querySelector('.ytp-live, .ytp-live-badge, ytd-watch-flexy [aria-label*="LIVE"], ytd-watch-flexy [aria-label*="ライブ"]');
+            if (domLiveIndicator && (domLiveIndicator.offsetWidth > 0 || domLiveIndicator.offsetHeight > 0)) {
+                isLive = true;
+            }
+
+            let attempts = 0;
+            while (attempts < 6) {
+                const status = await checkLiveStatusViaInjection();
+                if (status.isLive) {
+                    isLive = true;
+                    if (status.author) {
+                        currentAccountName = status.author;
                     }
-                    
-                    await new Promise(r => setTimeout(r, 500));
-                    attempts++;
+                    break;
                 }
+                if (status.videoId && targetVideoId && status.videoId === targetVideoId) {
+                    isLive = status.isLive;
+                    if (status.author) {
+                        currentAccountName = status.author;
+                    }
+                    break;
+                }
+                
+                await new Promise(r => setTimeout(r, 200));
+                attempts++;
             }
         }
 
@@ -833,13 +861,6 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             }
         }
 
-        if (isLive) {
-            sessionStorage.setItem('volumeBoosterIsLiveAutoBoost', 'true');
-            activeSource = 'live';
-            applyBoost(ytSettings.targetVolume);
-            return;
-        }
-
         // サイト全体設定の評価 (Site-wide)
         const siteMatchKey = findBestMatchingKey(currentUrl, settings);
         const currentSiteBoost = (siteMatchKey && settings[siteMatchKey] !== undefined) ? settings[siteMatchKey] : 100;
@@ -850,6 +871,28 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
             const accountKey = `youtube:${currentAccountName}`;
             if (accountSettings[accountKey] !== undefined) {
                 currentAccountBoost = accountSettings[accountKey];
+            }
+        }
+
+        const baseBoost = currentAccountBoost !== null ? currentAccountBoost : currentSiteBoost;
+
+        if (isLive && ytLiveEnabled) {
+            sessionStorage.setItem('volumeBoosterIsLiveAutoBoost', 'true');
+            activeSource = 'live';
+            currentLiveMultiplier = ytLiveMultiplier;
+            const calculatedBoost = clamp(Math.round(baseBoost * ytLiveMultiplier), 10, 600);
+            applyBoost(calculatedBoost);
+            if (window.top === window) {
+                saveTabTempBoost(calculatedBoost);
+            }
+            return;
+        } else {
+            currentLiveMultiplier = null;
+            if (sessionStorage.getItem('volumeBoosterIsLiveAutoBoost') === 'true') {
+                sessionStorage.removeItem('volumeBoosterIsLiveAutoBoost');
+                if (window.top === window) {
+                    clearTabTempBoost();
+                }
             }
         }
 

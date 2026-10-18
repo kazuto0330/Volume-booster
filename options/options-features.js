@@ -18,7 +18,8 @@ const OptionsFeatures = {
 
     if (ytSlider && ytValueDisplay) {
       ytSlider.addEventListener('input', () => {
-        ytValueDisplay.textContent = `${ytSlider.value}%`;
+        const val = parseFloat(ytSlider.value).toFixed(1);
+        ytValueDisplay.textContent = `${val}x`;
       });
       ytSlider.addEventListener('change', () => this.saveYtLiveSettings());
       ytSlider.addEventListener('wheel', (e) => this.handleYtSliderWheel(e));
@@ -117,7 +118,18 @@ const OptionsFeatures = {
   },
 
   load(data) {
-    const ytLiveSettings = data.ytLiveSettings || { enabled: false, targetVolume: 60 };
+    let ytLiveMultiplier = 1.0;
+    let ytLiveEnabled = false;
+    if (data.ytLiveSettings) {
+      ytLiveEnabled = !!data.ytLiveSettings.enabled;
+      if (typeof data.ytLiveSettings.multiplier === 'number') {
+        ytLiveMultiplier = data.ytLiveSettings.multiplier;
+      } else if (typeof data.ytLiveSettings.targetVolume === 'number') {
+        ytLiveMultiplier = Math.round((data.ytLiveSettings.targetVolume / 100) * 10) / 10;
+      }
+    }
+    ytLiveMultiplier = clamp(Math.round(ytLiveMultiplier * 10) / 10, 0.1, 5.0);
+
     const ytAutoSettings = data.ytAutoSettings || { enabled: false, volume: 30 };
     const ytScrollSettings = data.ytScrollSettings || { enabled: false, step: 5 };
     const twitchScrollSettings = data.twitchScrollSettings || { enabled: false, step: 5 };
@@ -126,9 +138,9 @@ const OptionsFeatures = {
     const ytToggle = document.getElementById('yt-live-toggle');
     const ytSlider = document.getElementById('yt-live-slider');
     const ytValueDisplay = document.getElementById('yt-live-value-display');
-    if (ytToggle) ytToggle.checked = ytLiveSettings.enabled;
-    if (ytSlider) ytSlider.value = ytLiveSettings.targetVolume;
-    if (ytValueDisplay) ytValueDisplay.textContent = `${ytLiveSettings.targetVolume}%`;
+    if (ytToggle) ytToggle.checked = ytLiveEnabled;
+    if (ytSlider) ytSlider.value = ytLiveMultiplier.toFixed(1);
+    if (ytValueDisplay) ytValueDisplay.textContent = `${ytLiveMultiplier.toFixed(1)}x`;
     this.updatePanelState(ytToggle, 'yt-live-slider');
 
     // YT Auto
@@ -162,14 +174,15 @@ const OptionsFeatures = {
   handleYtSliderWheel(event) {
     const slider = event.target;
     event.preventDefault();
-    const currentValue = parseInt(slider.value, 10);
-    const step = event.deltaY < 0 ? (currentValue < 100 ? 10 : 20) : (currentValue <= 100 ? -10 : -20);
-    const newValue = clamp(currentValue + step, 10, 600);
+    const currentValue = parseFloat(slider.value);
+    const step = event.deltaY < 0 ? 0.1 : -0.1;
+    let newValue = clamp(Math.round((currentValue + step) * 10) / 10, 0.1, 5.0);
+    newValue = parseFloat(newValue.toFixed(1));
 
     if (newValue !== currentValue) {
-      slider.value = newValue;
+      slider.value = newValue.toFixed(1);
       const ytValueDisplay = document.getElementById('yt-live-value-display');
-      if (ytValueDisplay) ytValueDisplay.textContent = `${newValue}%`;
+      if (ytValueDisplay) ytValueDisplay.textContent = `${newValue.toFixed(1)}x`;
 
       clearTimeout(this.ytSaveTimer);
       this.ytSaveTimer = setTimeout(() => this.saveYtLiveSettings(), 500);
@@ -232,7 +245,7 @@ const OptionsFeatures = {
     const ytSlider = document.getElementById('yt-live-slider');
     const settings = {
       enabled: ytToggle.checked,
-      targetVolume: parseInt(ytSlider.value, 10)
+      multiplier: parseFloat(parseFloat(ytSlider.value).toFixed(1))
     };
 
     chrome.storage.sync.set({ ytLiveSettings: settings }, () => {

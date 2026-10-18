@@ -154,6 +154,21 @@ input[type="number"]::-webkit-inner-spin-button {
   display: none; /* Hidden by default */
 }
 
+.live-indicator {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #e74c3c;
+  border: 1px solid #c0392b;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: none; /* Hidden by default */
+  box-shadow: 0 1px 3px rgba(231, 76, 60, 0.4);
+}
+
 /* Control Header Layout */
 .control-header {
   display: flex;

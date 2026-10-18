@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const domainActiveIndicator = document.getElementById('domain-active');
   const accountActiveIndicator = document.getElementById('account-active');
   const tempActiveIndicator = document.getElementById('temp-active');
+  const tempLiveBadge = document.getElementById('temp-live-badge');
 
   const optionsBtn = document.getElementById('options-btn');
   const toggleExpandBtn = document.getElementById('toggle-expand-btn');
@@ -44,6 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let hasAccountSetting = false;
   let hasDomainSetting = false;
   let isTempActive = false;
+  let isLiveBoost = false;
+  let liveMultiplier = null;
 
   const availableLanguages = {
     'en': 'English',
@@ -63,7 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     optionsBtn,
     domainActiveIndicator,
     accountActiveIndicator,
-    tempActiveIndicator
+    tempActiveIndicator,
+    tempLiveBadge
   });
 
   PopupUI.initLanguageSelector(availableLanguages, handleLanguageChange);
@@ -109,6 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function initializePopupContent() {
     isTempActive = false;
+    isLiveBoost = false;
+    liveMultiplier = null;
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       currentTab = tabs[0];
       if (currentTab.url && currentTab.url.startsWith('http')) {
@@ -193,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const currentAccountBoost = hasAccountSetting ? accSettings[accountKey] : null;
 
               // 一時設定がある場合、アカウント設定の遷移前後一致条件を検証
-              if (tabTempOverride && isTempActive) {
+              if (tabTempOverride && isTempActive && !isLiveBoost) {
                 const isSameAccountBoost = tabTempOverride.accountBoost === currentAccountBoost;
                 if (!isSameAccountBoost) {
                   // アカウント設定が遷移前と異なるため、一時設定を解除
@@ -215,8 +221,8 @@ document.addEventListener('DOMContentLoaded', () => {
               }
               updateControls(accountSlider, accountNumberInput, accountBoost);
 
-              // 現在のタブの初期値: 一時設定が有効でない場合のみ、設定されていればアカウント、なければサイト全体の数値を適用
-              if (!isTempActive) {
+              // 現在のタブの初期値: 一時設定もライブブーストも有効でない場合のみ、設定されていればアカウント、なければサイト全体の数値を適用
+              if (!isTempActive && !isLiveBoost) {
                 const initialTempBoost = hasAccountSetting ? accountBoost : domainBoost;
                 updateControls(tempSlider, tempNumberInput, initialTempBoost);
               }
@@ -240,6 +246,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
               chrome.tabs.sendMessage(tabId, { type: 'GET_CURRENT_VOLUME' }, { frameId: 0 }, (res) => {
                 if (!chrome.runtime.lastError && res && res.accountName) {
+                  if (res.activeSource === 'live') {
+                    isLiveBoost = true;
+                    liveMultiplier = typeof res.liveMultiplier === 'number' ? res.liveMultiplier : 1.0;
+                    isTempActive = false;
+                    updateControls(tempSlider, tempNumberInput, res.boost);
+                  }
                   setupAccountUI(res.accountName, tabTempOverride);
                 } else if (attemptsLeft > 1) {
                   fetchAccountWithRetry(tabId, attemptsLeft - 1, tabTempOverride);
@@ -268,6 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // content.jsから現在のタブの音量を取得（メインフレーム限定 frameId: 0）
             chrome.tabs.sendMessage(currentTab.id, { type: 'GET_CURRENT_VOLUME' }, { frameId: 0 }, async (response) => {
               if (chrome.runtime.lastError || !response) {
+                isLiveBoost = false;
+                liveMultiplier = null;
                 if (!isTempActive) {
                   updateControls(tempSlider, tempNumberInput, domainBoost);
                 }
@@ -283,10 +297,19 @@ document.addEventListener('DOMContentLoaded', () => {
                   }
                 }
               } else {
-                if (response.activeSource === 'temp') {
+                if (response.activeSource === 'live') {
+                  isLiveBoost = true;
+                  liveMultiplier = typeof response.liveMultiplier === 'number' ? response.liveMultiplier : 1.0;
+                  isTempActive = false;
+                  updateControls(tempSlider, tempNumberInput, response.boost);
+                } else if (response.activeSource === 'temp') {
+                  isLiveBoost = false;
+                  liveMultiplier = null;
                   isTempActive = true;
                   updateControls(tempSlider, tempNumberInput, response.boost);
                 } else if (response.activeSource === 'account' || response.activeSource === 'domain' || response.activeSource === 'default') {
+                  isLiveBoost = false;
+                  liveMultiplier = null;
                   if (!tabTempOverride || !isTempActive) {
                     isTempActive = false;
                     updateControls(tempSlider, tempNumberInput, response.boost);
@@ -383,6 +406,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const boost = sanitizeBoostValue(value);
     updateControls(tempSlider, tempNumberInput, boost);
     isTempActive = true;
+    isLiveBoost = false;
+    liveMultiplier = null;
     applyBoostToTab(boost, true);
     updateActiveIndicators();
   }
@@ -395,6 +420,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // アカウントとサイト全体のどちらかのスライダーを操作したら、現在のタブのみにもその数値を適用
     isTempActive = false;
+    isLiveBoost = false;
+    liveMultiplier = null;
     updateControls(tempSlider, tempNumberInput, boost);
     applyBoostToTab(boost, false);
     if (currentTab && currentTab.id) {
@@ -413,6 +440,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // アカウントとサイト全体のどちらかのスライダーを操作したら、現在のタブのみにもその数値を適用
     isTempActive = false;
+    isLiveBoost = false;
+    liveMultiplier = null;
     updateControls(tempSlider, tempNumberInput, boost);
     applyBoostToTab(boost, false);
     if (currentTab && currentTab.id) {
@@ -528,6 +557,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleTempReset() {
     isTempActive = false;
+    isLiveBoost = false;
+    liveMultiplier = null;
     const fallbackBoost = getNextEffectiveBoost({ excludeType: 'temp' });
 
     updateControls(tempSlider, tempNumberInput, fallbackBoost);
@@ -551,7 +582,9 @@ document.addEventListener('DOMContentLoaded', () => {
       hasDomainSetting,
       hasAccountSetting,
       isTempActive,
-      currentEffectiveBoost
+      currentEffectiveBoost,
+      isLiveBoost,
+      liveMultiplier
     });
   }
 

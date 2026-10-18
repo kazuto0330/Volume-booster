@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleResetFeatures() {
     if (confirm(strings[currentLang].resetFeaturesConfirm)) {
       const defaultFeatures = {
-        ytLiveSettings: { enabled: false, targetVolume: 60 },
+        ytLiveSettings: { enabled: false, multiplier: 1.0 },
         ytAutoSettings: { enabled: false, volume: 30 },
         ytScrollSettings: { enabled: false, step: 5 },
         twitchScrollSettings: { enabled: false, step: 5 }
