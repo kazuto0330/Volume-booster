@@ -6,6 +6,43 @@ const OFFSCREEN_DOCUMENT_PATH = 'offscreen/offscreen.html';
 // キャプチャ中のタブ情報を管理するMap: tabId -> { volume: number }
 const capturedTabs = new Map();
 
+// セッションストレージとの同期キー
+const CAPTURED_TABS_STORAGE_KEY = 'captured_tabs_map';
+
+// セッションストレージからメモリへの同期（復元）
+async function syncCapturedTabsFromStorage() {
+  if (!chrome.storage || !chrome.storage.session) return;
+  try {
+    const data = await chrome.storage.session.get([CAPTURED_TABS_STORAGE_KEY]);
+    const stored = data ? data[CAPTURED_TABS_STORAGE_KEY] : null;
+    if (stored && typeof stored === 'object') {
+      capturedTabs.clear();
+      for (const [tIdStr, info] of Object.entries(stored)) {
+        capturedTabs.set(Number(tIdStr), info);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+// メモリからセッションストレージへの永続化
+async function persistCapturedTabsToStorage() {
+  if (!chrome.storage || !chrome.storage.session) return;
+  try {
+    const obj = {};
+    for (const [tId, info] of capturedTabs.entries()) {
+      obj[tId] = info;
+    }
+    await chrome.storage.session.set({ [CAPTURED_TABS_STORAGE_KEY]: obj });
+  } catch (e) {
+    // ignore
+  }
+}
+
+// 起動時にセッションから即時復元
+syncCapturedTabsFromStorage();
+
 // Offscreen Document の生成
 async function setupOffscreenDocument() {
   const offscreenUrl = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH);
@@ -82,6 +119,7 @@ async function updateTabVolumeAuto(tabId, volume) {
     return false;
   }
 
+  await syncCapturedTabsFromStorage();
   const isCapturing = capturedTabs.has(tabId);
 
   if (volume !== 100) {
@@ -99,6 +137,7 @@ async function updateTabVolumeAuto(tabId, volume) {
             }
 
             capturedTabs.set(tabId, { volume });
+            await persistCapturedTabsToStorage();
 
             sendToOffscreen({
               action: 'START_CAPTURE',
@@ -116,6 +155,7 @@ async function updateTabVolumeAuto(tabId, volume) {
     } else {
       // 既にキャプチャ中のためゲインのみ即時更新
       capturedTabs.set(tabId, { volume });
+      await persistCapturedTabsToStorage();
       sendToOffscreen({
         action: 'UPDATE_VOLUME',
         tabId: tabId,
@@ -127,6 +167,7 @@ async function updateTabVolumeAuto(tabId, volume) {
     // 100%（通常音量）: キャプチャを自動停止して通常再生へ戻す
     if (isCapturing) {
       capturedTabs.delete(tabId);
+      await persistCapturedTabsToStorage();
       sendToOffscreen({
         action: 'STOP_CAPTURE',
         tabId: tabId,
@@ -146,8 +187,10 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // タブが閉じられたときのクリーンアップ
 chrome.tabs.onRemoved.addListener(async (tabId) => {
+  await syncCapturedTabsFromStorage();
   if (capturedTabs.has(tabId)) {
     capturedTabs.delete(tabId);
+    await persistCapturedTabsToStorage();
     sendToOffscreen({
       action: 'STOP_CAPTURE',
       tabId: tabId,
@@ -230,33 +273,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.type === 'STOP_TAB_CAPTURE_IF_ANY') {
     const tabId = request.tabId || (sender.tab ? sender.tab.id : null);
-    if (tabId && capturedTabs.has(tabId)) {
-      capturedTabs.delete(tabId);
-      sendToOffscreen({
-        action: 'STOP_CAPTURE',
-        tabId: tabId,
-      });
-      closeOffscreenDocumentIfIdle();
-    }
-    sendResponse({ success: true });
-    return false;
+    syncCapturedTabsFromStorage().then(async () => {
+      if (tabId && capturedTabs.has(tabId)) {
+        capturedTabs.delete(tabId);
+        await persistCapturedTabsToStorage();
+        sendToOffscreen({
+          action: 'STOP_CAPTURE',
+          tabId: tabId,
+        });
+        closeOffscreenDocumentIfIdle();
+      }
+      sendResponse({ success: true });
+    });
+    return true;
   }
 
   if (request.type === 'GET_TAB_CAPTURE_STATUS') {
-    // バックグラウンドが自前でMap管理しているため、安全・同期的に即答可能
     const tabId = request.tabId || (sender.tab ? sender.tab.id : null);
-    const isCapturing = tabId ? capturedTabs.has(tabId) : false;
-    const currentVol = isCapturing ? capturedTabs.get(tabId).volume : 100;
-    sendResponse({ isCapturing, volume: currentVol });
-    return false;
+    if (!tabId) {
+      sendResponse({ isCapturing: false, volume: 100 });
+      return false;
+    }
+    syncCapturedTabsFromStorage().then(() => {
+      const isCapturing = capturedTabs.has(tabId);
+      const currentVol = isCapturing ? capturedTabs.get(tabId).volume : 100;
+      sendResponse({ isCapturing, volume: currentVol });
+    });
+    return true;
   }
 
   if (request.type === 'TAB_CAPTURE_STOPPED') {
     // トラック終了等で外的に停止した場合
-    if (capturedTabs.has(request.tabId)) {
-      capturedTabs.delete(request.tabId);
-      closeOffscreenDocumentIfIdle();
-    }
+    syncCapturedTabsFromStorage().then(async () => {
+      if (capturedTabs.has(request.tabId)) {
+        capturedTabs.delete(request.tabId);
+        await persistCapturedTabsToStorage();
+        closeOffscreenDocumentIfIdle();
+      }
+    });
     return false;
   }
 
@@ -278,7 +332,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     // 既存のコンテンツスクリプトへ通知
     chrome.tabs.sendMessage(tabId, { type: 'URL_CHANGED', url: tab.url }, (response) => {
       if (chrome.runtime.lastError) {
-        checkAndInject(tabId, normalizedUrl);
+        // ロード完了時（isComplete）にのみ、マニフェスト宣言スクリプトが未注入だった場合のフォールバックとして注入
+        if (isComplete) {
+          checkAndInject(tabId, normalizedUrl);
+        }
       }
     });
   }

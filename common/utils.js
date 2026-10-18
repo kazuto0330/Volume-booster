@@ -1,134 +1,148 @@
 // utils.js - 共通ユーティリティ関数群
 
-/**
- * URLからプロトコル (https?://) と 'www.' を除去して正規化する
- * @param {string} url
- * @returns {string}
- */
-function normalizeUrl(url) {
-  if (!url) return '';
-  return url.replace(/^https?:\/\//, '').replace(/^www\./, '');
-}
+if (typeof globalThis.volumeBoosterUtilsLoaded === 'undefined') {
+  globalThis.volumeBoosterUtilsLoaded = true;
 
-/**
- * URLからホスト名（ドメイン）を抽出し、小文字化および 'www.' を除去する
- * @param {string} url
- * @returns {string}
- */
-function getDomainFromUrl(url) {
-  if (!url) return '';
-  try {
-    const parsed = new URL(url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`);
-    return parsed.hostname.toLowerCase().replace(/^www\./, '');
-  } catch (e) {
-    return '';
+  /**
+   * URLからプロトコル (https?://) と 'www.' を除去して正規化する
+   * @param {string} url
+   * @returns {string}
+   */
+  function normalizeUrl(url) {
+    if (!url) return '';
+    return url.replace(/^https?:\/\//, '').replace(/^www\./, '');
   }
-}
 
-/**
- * 2つのURLまたはドメインが同一ドメイン（同一ホストまたはサブドメイン関係）であるかを判定する
- * @param {string} urlOrDomain1
- * @param {string} urlOrDomain2
- * @returns {boolean}
- */
-function isSameDomain(urlOrDomain1, urlOrDomain2) {
-  const d1 = getDomainFromUrl(urlOrDomain1);
-  const d2 = getDomainFromUrl(urlOrDomain2);
-  if (!d1 || !d2) return false;
-  return d1 === d2 || d1.endsWith('.' + d2) || d2.endsWith('.' + d1);
-}
+  /**
+   * URLからホスト名（ドメイン）を抽出し、小文字化および 'www.' を除去する
+   * @param {string} url
+   * @returns {string}
+   */
+  function getDomainFromUrl(url) {
+    if (!url) return '';
+    try {
+      const parsed = new URL(url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`);
+      return parsed.hostname.toLowerCase().replace(/^www\./, '');
+    } catch (e) {
+      return '';
+    }
+  }
 
-/**
- * キー（ドメインまたはURLパス）が指定の正規化URLにマッチするか判定する
- * @param {string} key
- * @param {string} normalizedUrl
- * @returns {boolean}
- */
-function isUrlMatch(key, normalizedUrl) {
-  if (!normalizedUrl || !key) return false;
-  if (!normalizedUrl.startsWith(key)) return false;
-  if (normalizedUrl.length === key.length) return true;
-  const nextChar = normalizedUrl[key.length];
-  return ['/', '?', '#'].includes(nextChar);
-}
+  /**
+   * 2つのURLまたはドメインが同一ドメイン（同一ホストまたはサブドメイン関係）であるかを判定する
+   * @param {string} urlOrDomain1
+   * @param {string} urlOrDomain2
+   * @returns {boolean}
+   */
+  function isSameDomain(urlOrDomain1, urlOrDomain2) {
+    const d1 = getDomainFromUrl(urlOrDomain1);
+    const d2 = getDomainFromUrl(urlOrDomain2);
+    if (!d1 || !d2) return false;
+    return d1 === d2 || d1.endsWith('.' + d2) || d2.endsWith('.' + d1);
+  }
 
-/**
- * 保存された設定キーの中から、正規化URLに最も長く一致する（最長一致）キーを検索する
- * @param {string} normalizedUrl
- * @param {Object} settings
- * @returns {string|null}
- */
-function findBestMatchingKey(normalizedUrl, settings) {
-  if (!normalizedUrl || !settings) return null;
-  let bestMatchKey = null;
-  let maxLen = -1;
+  /**
+   * キー（ドメインまたはURLパス）が指定の正規化URLにマッチするか判定する
+   * @param {string} key
+   * @param {string} normalizedUrl
+   * @returns {boolean}
+   */
+  function isUrlMatch(key, normalizedUrl) {
+    if (!normalizedUrl || !key) return false;
+    if (!normalizedUrl.startsWith(key)) return false;
+    if (normalizedUrl.length === key.length) return true;
+    const nextChar = normalizedUrl[key.length];
+    return ['/', '?', '#'].includes(nextChar);
+  }
 
-  for (const key in settings) {
-    if (isUrlMatch(key, normalizedUrl)) {
-      if (key.length > maxLen) {
-        maxLen = key.length;
-        bestMatchKey = key;
+  /**
+   * 保存された設定キーの中から、正規化URLに最も長く一致する（最長一致）キーを検索する
+   * @param {string} normalizedUrl
+   * @param {Object} settings
+   * @returns {string|null}
+   */
+  function findBestMatchingKey(normalizedUrl, settings) {
+    if (!normalizedUrl || !settings) return null;
+    let bestMatchKey = null;
+    let maxLen = -1;
+
+    for (const key in settings) {
+      if (isUrlMatch(key, normalizedUrl)) {
+        if (key.length > maxLen) {
+          maxLen = key.length;
+          bestMatchKey = key;
+        }
+      }
+    }
+    return bestMatchKey;
+  }
+
+  /**
+   * 連続して呼び出される関数をデバウンス（遅延実行）する
+   * @param {Function} func
+   * @param {number} wait ミリ秒
+   * @returns {Function}
+   */
+  function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+  }
+
+  /**
+   * 数値を指定範囲 [min, max] に収める
+   * @param {number} val
+   * @param {number} min
+   * @param {number} max
+   * @returns {number}
+   */
+  function clamp(val, min, max) {
+    const num = Number(val);
+    if (isNaN(num)) return min;
+    return Math.min(Math.max(num, min), max);
+  }
+
+  /**
+   * ページ全体にテーマ（ライト/ダーク）を適用する
+   * @param {string} theme 'light' または 'dark'
+   */
+  function applyTheme(theme) {
+    if (typeof document !== 'undefined' && document.body) {
+      if (theme === 'dark') {
+        document.body.classList.add('theme-dark');
+      } else {
+        document.body.classList.remove('theme-dark');
       }
     }
   }
-  return bestMatchKey;
-}
 
-/**
- * 連続して呼び出される関数をデバウンス（遅延実行）する
- * @param {Function} func
- * @param {number} wait ミリ秒
- * @returns {Function}
- */
-function debounce(func, wait) {
-  let timeout;
-  return function(...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), wait);
-  };
-}
-
-/**
- * 数値を指定範囲 [min, max] に収める
- * @param {number} val
- * @param {number} min
- * @param {number} max
- * @returns {number}
- */
-function clamp(val, min, max) {
-  const num = Number(val);
-  if (isNaN(num)) return min;
-  return Math.min(Math.max(num, min), max);
-}
-
-/**
- * ページ全体にテーマ（ライト/ダーク）を適用する
- * @param {string} theme 'light' または 'dark'
- */
-function applyTheme(theme) {
-  if (document && document.body) {
-    if (theme === 'dark') {
-      document.body.classList.add('theme-dark');
-    } else {
-      document.body.classList.remove('theme-dark');
-    }
+  /**
+   * 文字列をHTMLエスケープする
+   * @param {string} str
+   * @returns {string}
+   */
+  function escapeHTML(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/[&<>'"]/g, 
+      tag => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+      }[tag] || tag)
+    );
   }
-}
 
-/**
- * 文字列をHTMLエスケープする
- * @param {string} str
- * @returns {string}
- */
-function escapeHTML(str) {
-  if (typeof str !== 'string') return '';
-  return str.replace(/[&<>'"]/g, 
-    tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag] || tag)
-  );
+  globalThis.normalizeUrl = normalizeUrl;
+  globalThis.getDomainFromUrl = getDomainFromUrl;
+  globalThis.isSameDomain = isSameDomain;
+  globalThis.isUrlMatch = isUrlMatch;
+  globalThis.findBestMatchingKey = findBestMatchingKey;
+  globalThis.debounce = debounce;
+  globalThis.clamp = clamp;
+  globalThis.applyTheme = applyTheme;
+  globalThis.escapeHTML = escapeHTML;
 }

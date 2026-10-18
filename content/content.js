@@ -231,6 +231,10 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       }
     } else {
       // CORS制限またはメディアなし: メインフレームのみがTab Captureを要請
+      // Tab Captureモードへ移行するため、DOM側のGainNodeが存在する場合は100%（バイパス）にして二重増幅を防止
+      if (gainNode) {
+        gainNode.gain.value = 1.0;
+      }
       if (window.top === window) {
         chrome.runtime.sendMessage({
           type: 'UPDATE_TAB_VOLUME',
@@ -402,6 +406,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       });
       return true;
     } else if (request.type === 'URL_CHANGED') {
+      currentAccountName = null;
       initPromise = initializeFromStorage();
       initPromise.then(() => {
         sendResponse({ status: "ok" });
@@ -653,6 +658,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
         
         // Listen for YouTube navigation events to re-ensure injection and settings
         document.addEventListener('yt-navigate-finish', () => {
+             currentAccountName = null;
              initializeFromStorage(); // Re-read settings on navigation
              if (scrollSettings.enabled) {
                  ensureInjectedScript();
@@ -741,6 +747,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   
     // ページ読み込み時に保存された設定を適用
     async function initializeFromStorage() {
+      if (window.top === window && window.location.hostname.includes('youtube.com')) {
+        currentAccountName = null;
+      }
       const currentUrl = getNormalizedUrl();
       try {
         const data = await chrome.storage.sync.get({
