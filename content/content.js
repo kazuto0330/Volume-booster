@@ -7,6 +7,9 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
   let audioContext = null;
   let gainNode = null;
   const mediaElements = new WeakMap();
+  const pendingMediaElements = new Set();
+  let isUserActivationListenerAttached = false;
+  const USER_ACTIVATION_EVENTS = ['click', 'pointerdown', 'keydown', 'touchstart'];
   let domObserver = null;
   let currentBoost = 100; // 現在のブースト値を保持
   let currentAccountName = null; // 現在のYouTubeアカウント名を保持
@@ -113,25 +116,98 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     return true;
   }
 
+  // Autoplay Policy 対策: 安全な resume 試行
+  function safeResumeAudioContext() {
+    if (!audioContext) return;
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {});
+    }
+  }
+
+  // ユーザーの明示的操作イベントハンドラ
+  function handleUserActivation() {
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {});
+    }
+  }
+
+  // ユーザー操作リスナーの安全な登録
+  function ensureUserActivationListeners() {
+    if (isUserActivationListenerAttached || !audioContext) return;
+    if (audioContext.state === 'running') return;
+
+    USER_ACTIVATION_EVENTS.forEach((evt) => {
+      window.addEventListener(evt, handleUserActivation, { capture: true, passive: true });
+    });
+    isUserActivationListenerAttached = true;
+  }
+
+  // ユーザー操作リスナーの解除
+  function detachUserActivationListeners() {
+    if (!isUserActivationListenerAttached) return;
+    USER_ACTIVATION_EVENTS.forEach((evt) => {
+      window.removeEventListener(evt, handleUserActivation, { capture: true, passive: true });
+    });
+    isUserActivationListenerAttached = false;
+  }
+
+  // メディア要素に対する直接操作リスナーの付与（ミュート解除やクリック時の resume）
+  function attachElementInteractionListeners(element) {
+    if (!element || element.__vbInteractionAttached) return;
+    element.__vbInteractionAttached = true;
+
+    const handleElementInteraction = () => {
+      safeResumeAudioContext();
+    };
+
+    ['play', 'volumechange', 'click', 'pointerdown'].forEach((evt) => {
+      element.addEventListener(evt, handleElementInteraction, { passive: true });
+    });
+  }
+
+  // 保留中（pending）のメディア要素を一括でオーディオグラフへ接続
+  function processPendingMediaElements() {
+    if (!audioContext || audioContext.state !== 'running' || !gainNode) return;
+    const elements = Array.from(pendingMediaElements);
+    pendingMediaElements.clear();
+    for (const el of elements) {
+      if (document.contains(el)) {
+        connectMediaElementToAudioContext(el);
+      }
+    }
+  }
+
+  // メディア要素を Web Audio API のオーディオグラフへ実際に接続
+  function connectMediaElementToAudioContext(element) {
+    if (!element || mediaElements.has(element) || !audioContext || !gainNode) return;
+    try {
+      const source = audioContext.createMediaElementSource(element);
+      source.connect(gainNode);
+      mediaElements.set(element, source);
+      pendingMediaElements.delete(element);
+    } catch (error) {
+      console.error('Volume Booster: Error processing media element.', error);
+    }
+  }
+
   // Web Audio API のセットアップ
   function setupAudioContext() {
     if (audioContext) return;
     try {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-      // Autoplay Policy 対策: suspended 状態ならユーザー操作時に resume する
+      // AudioContext の状態変化を監視し、running 遷移時に保留要素を一括接続
+      audioContext.addEventListener('statechange', () => {
+        if (audioContext.state === 'running') {
+          processPendingMediaElements();
+          detachUserActivationListeners();
+        } else if (audioContext.state === 'suspended') {
+          ensureUserActivationListeners();
+        }
+      });
+
       if (audioContext.state === 'suspended') {
-        const resumeAudio = () => {
-          if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume();
-          }
-          ['click', 'keydown', 'touchstart'].forEach(evt => 
-            document.removeEventListener(evt, resumeAudio, { capture: true })
-          );
-        };
-        ['click', 'keydown', 'touchstart'].forEach(evt => 
-          document.addEventListener(evt, resumeAudio, { once: true, capture: true })
-        );
+        ensureUserActivationListeners();
       }
 
       gainNode = audioContext.createGain();
@@ -142,7 +218,7 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
     }
   }
 
-  // メディア要素をオーディオグラフに接続
+  // メディア要素をオーディオグラフに接続または保留
   function processMediaElement(element) {
     if (!element || mediaElements.has(element)) return;
 
@@ -182,23 +258,22 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       return;
     }
 
-    // ここまで来た要素は確実に isMediaElementSafeForDOM が true なので安全に接続可能
+    // ここまで来た要素は確実に isMediaElementSafeForDOM が true なので安全に対象化可能
     if (!audioContext || !gainNode) return;
 
-    try {
-      const source = audioContext.createMediaElementSource(element);
-      source.connect(gainNode);
-      mediaElements.set(element, source);
+    // 要素個別の直接操作（ミュート解除やクリック等）による resume リスナーを登録
+    attachElementInteractionListeners(element);
 
-      // 再生開始時に suspended であれば resume を試みる
-      element.addEventListener('play', () => {
-        if (audioContext && audioContext.state === 'suspended') {
-          audioContext.resume().catch(() => {});
-        }
-      });
-    } catch (error) {
-      console.error('Volume Booster: Error processing media element.', error);
+    // AudioContext が suspended の間は createMediaElementSource を絶対に呼ばない！
+    // 接続してしまうと通常音声出力が切断され無音化するため、running 遷移まで保留キューで待機
+    if (audioContext.state !== 'running') {
+      pendingMediaElements.add(element);
+      ensureUserActivationListeners();
+      return;
     }
+
+    // AudioContext が running であれば即座に安全に接続
+    connectMediaElementToAudioContext(element);
   }
 
   // ページ上のすべてのメディア要素を処理
@@ -217,9 +292,8 @@ if (typeof window.volumeBoosterAttached === 'undefined') {
       }
 
       if (gainNode) {
-        if (audioContext && audioContext.state === 'suspended') {
-          audioContext.resume().catch(() => {});
-        }
+        // ユーザー操作コンテキストでの呼び出しであれば安全に resume を試行
+        safeResumeAudioContext();
         gainNode.gain.value = boost / 100;
         // 未接続のメディア要素があれば確実に処理
         processAllMediaElements();
